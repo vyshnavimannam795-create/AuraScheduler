@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Book a Meeting — AuraScheduler</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  :root {
+    --bg:#0d0d1a; --surface:#13132b; --card:#1a1a35; --border:#2a2a55;
+    --accent1:#7c3aed; --accent2:#a855f7; --accent3:#06b6d4; --accent4:#10b981;
+    --danger:#ef4444; --text:#e2e8f0; --muted:#94a3b8; --glow:rgba(124,58,237,.3);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  /* HERO */
+  .hero {
+    text-align:center; padding:60px 20px 40px;
+    background:radial-gradient(ellipse at 50% 0%, rgba(124,58,237,.2) 0%, transparent 70%);
+  }
+  .hero-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(124,58,237,.15); border:1px solid rgba(124,58,237,.3);
+    border-radius:20px; padding:5px 14px; font-size:12px; font-weight:600; color:var(--accent2);
+    margin-bottom:16px;
+  }
+  .hero h1 {
+    font-size:40px; font-weight:700; margin-bottom:12px;
+    background:linear-gradient(135deg,#fff 0%,#a855f7 50%,#06b6d4 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .hero p { color:var(--muted); font-size:16px; max-width:500px; margin:0 auto; }
+
+  .container { max-width:900px; margin:0 auto; padding:0 20px 60px; }
+
+  /* STEP INDICATOR */
+  .steps {
+    display:flex; align-items:center; justify-content:center;
+    gap:0; margin-bottom:40px; padding:20px 0;
+  }
+  .step-item { display:flex; align-items:center; gap:0; }
+  .step-circle {
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; border:2px solid var(--border);
+    background:var(--surface); color:var(--muted); transition:all .3s;
+    flex-shrink:0;
+  }
+  .step-circle.active { border-color:var(--accent1); background:var(--accent1); color:#fff; }
+  .step-circle.done { border-color:var(--accent4); background:var(--accent4); color:#fff; }
+  .step-line { width:60px; height:2px; background:var(--border); transition:background .3s; }
+  .step-line.done { background:var(--accent4); }
+  .step-label { font-size:11px; color:var(--muted); text-align:center; margin-top:6px; }
+  .step-wrap { display:flex; flex-direction:column; align-items:center; }
+
+  /* CARD */
+  .card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:18px; padding:30px; margin-bottom:20px;
+  }
+  .card-title { font-size:18px; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+
+  /* DATE PICKER */
+  .date-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+
+  .cal-mini { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .cal-mini-header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 16px; border-bottom:1px solid var(--border);
+  }
+  .cal-mini-month { font-weight:600; font-size:14px; }
+  .cal-nav-btn { background:none; border:1px solid var(--border); color:var(--text); width:28px; height:28px; border-radius:7px; cursor:pointer; font-size:12px; }
+  .cal-mini-nav:hover { background:var(--border); }
+  .mini-grid { display:grid; grid-template-columns:repeat(7,1fr); padding:8px; }
+  .mini-dname { text-align:center; font-size:10px; color:var(--muted); font-weight:600; padding:4px 0; }
+  .mini-day {
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    font-size:12px; border-radius:6px; cursor:pointer; transition:all .15s;
+  }
+  .mini-day:hover:not(.disabled):not(.other) { background:rgba(124,58,237,.2); }
+  .mini-day.today { font-weight:700; color:var(--accent2); }
+  .mini-day.selected { background:var(--accent1); color:#fff; }
+  .mini-day.disabled { color:var(--border); cursor:not-allowed; }
+  .mini-day.other { color:var(--border); }
+  .mini-day.busy { color:var(--muted); }
+  .mini-day.busy::after { content:'·'; display:block; font-size:20px; line-height:0; margin-top:2px; color:var(--accent2); }
+
+  /* TIME SLOTS */
+  .slots-area { }
+  .slots-label { font-size:13px; color:var(--muted); margin-bottom:12px; }
+  .slots-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .slot {
+    padding:10px; border-radius:9px; border:1px solid var(--border);
+    background:var(--surface); text-align:center; cursor:pointer;
+    font-size:12px; font-weight:500; transition:all .2s;
+  }
+  .slot:hover { border-color:var(--accent1); background:rgba(124,58,237,.1); }
+  .slot.selected { background:var(--accent1); border-color:var(--accent1); color:#fff; }
+  .slot.busy { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.2); color:var(--danger); cursor:not-allowed; font-size:11px; }
+
+  /* CUSTOM TIME */
+  .custom-time { margin-top:14px; }
+  .custom-time-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
+
+  /* FORM */
+  .form-group { margin-bottom:16px; }
+  label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+  input, textarea {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); border-radius:9px; padding:11px 14px; font-size:14px; font-family:'Inter',sans-serif;
+    outline:none; transition:border-color .2s;
+  }
+  input:focus, textarea:focus { border-color:var(--accent1); }
+  textarea { resize:vertical; min-height:100px; }
+  input[type="time"] { color:var(--text); }
+
+  /* SUMMARY */
+  .summary-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .summary-row:last-child { border-bottom:none; }
+  .summary-label { color:var(--muted); }
+  .summary-value { font-weight:600; }
+
+  /* BUTTONS */
+  .btn { padding:11px 22px; border-radius:10px; border:none; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:6px; }
+  .btn-primary { background:linear-gradient(135deg,var(--accent1),var(--accent2)); color:#fff; }
+  .btn-primary:hover { opacity:.9; box-shadow:0 0 24px var(--glow); }
+  .btn-outline { background:transparent; color:var(--accent2); border:1px solid var(--accent1); }
+  .btn-outline:hover { background:rgba(124,58,237,.1); }
+  .btn-lg { padding:14px 28px; font-size:15px; width:100%; justify-content:center; }
+
+  .step-nav { display:flex; gap:12px; justify-content:space-between; margin-top:20px; }
+
+  /* SUCCESS */
+  .success-card {
+    text-align:center; padding:60px 30px;
+    background:radial-gradient(ellipse at 50% 0%, rgba(16,185,129,.1) 0%, transparent 60%);
+  }
+  .success-icon { font-size:60px; margin-bottom:20px; }
+  .success-card h2 { font-size:28px; font-weight:700; margin-bottom:10px; color:var(--accent4); }
+  .success-card p { color:var(--muted); font-size:15px; max-width:400px; margin:0 auto 28px; }
+
+  /* TOAST */
+  #toast { position:fixed;bottom:24px;right:24px;z-index:999;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:14px;transform:translateY(100px);opacity:0;transition:all .3s;max-width:320px; }
+  #toast.show{transform:translateY(0);opacity:1;}
+  #toast.error{border-left:3px solid var(--danger);}
+  #toast.success{border-left:3px solid var(--accent4);}
+
+  .loader{display:flex;gap:6px;justify-content:center;padding:20px;}
+  .loader span{width:7px;height:7px;border-radius:50%;background:var(--accent1);animation:bounce .6s infinite alternate;}
+  .loader span:nth-child(2){animation-delay:.15s;background:var(--accent2);}
+  .loader span:nth-child(3){animation-delay:.3s;background:var(--accent3);}
+  @keyframes bounce{to{transform:translateY(-8px);opacity:.5;}}
+
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">✦ AuraScheduler</div>
+  <h1>Book a Meeting</h1>
+  <p>Select a date, pick your time, fill in your details — done!</p>
+</div>
+
+<div class="container">
+  <!-- STEP INDICATORS -->
+  <div class="steps" id="step-indicators">
+    <div class="step-wrap"><div class="step-circle active" id="sc1">1</div><div class="step-label">Date & Time</div></div>
+    <div class="step-line" id="sl1"></div>
+    <div class="step-wrap"><div class="step-circle" id="sc2">2</div><div class="step-label">Your Details</div></div>
+    <div class="step-line" id="sl2"></div>
+    <div class="step-wrap"><div class="step-circle" id="sc3">3</div><div class="step-label">Confirm</div></div>
+  </div>
+
+  <!-- STEP 1: DATE & TIME -->
+  <div id="step1">
+    <div class="card">
+      <div class="card-title">📅 Choose a Date & Time</div>
+      <div class="date-grid">
+        <!-- CALENDAR -->
+        <div>
+          <div class="cal-mini">
+            <div class="cal-mini-header">
+              <button class="cal-nav-btn" onclick="bCalPrev()">◀</button>
+              <span class="cal-mini-month" id="b-month-label"></span>
+              <button class="cal-nav-btn" onclick="bCalNext()">▶</button>
+            </div>
+            <div class="mini-grid" id="b-day-names"></div>
+            <div class="mini-grid" id="b-cal-days"></div>
+          </div>
+        </div>
+        <!-- TIME SLOTS -->
+        <div class="slots-area">
+          <div class="slots-label" id="slots-label">Select a date to see available times</div>
+          <div class="slots-grid" id="slots-grid"></div>
+          <div class="custom-time">
+            <div class="slots-label" style="margin-top:16px">Or enter custom time:</div>
+            <div class="custom-time-row">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Start</label>
+                <input type="time" id="custom-start" value="09:00"/>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>End</label>
+                <input type="time" id="custom-end" value="10:00"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step-nav" style="justify-content:flex-end">
+      <button class="btn btn-primary" onclick="goStep2()">Next — Your Details →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: VISITOR DETAILS -->
+  <div id="step2" style="display:none">
+    <div class="card">
+      <div class="card-title">👤 Your Details</div>
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input id="v-name" type="text" placeholder="Vyshnavi Reddy"/>
+      </div>
+      <div class="form-group">
+        <label>Email *</label>
+        <input id="v-email" type="email" placeholder="you@example.com"/>
+      </div>
+      <div class="form-group">
+        <label>Purpose / Message *</label>
+        <textarea id="v-desc" placeholder="Briefly describe the reason for the meeting..."></textarea>
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn btn-outline" onclick="goStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="goStep3()">Next — Review →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: CONFIRM -->
+  <div id="step3" style="display:none">
+    <div class="card">
+      <div class="card-title">✅ Review & Confirm</div>
+      <div class="summary-row"><span class="summary-label">📅 Date</span><span class="summary-value" id="sum-date">—</span></div>
+      <div class="summary-row"><span class="summary-label">🕐 Time</span><span class="summary-value" id="sum-time">—</span></div>
+      <div class="summary-row"><span class="summary-label">👤 Name</span><span class="summary-value" id="sum-name">—</span></div>
+      <div class="summary-row"><span class="summary-label">✉️ Email</span><span class="summary-value" id="sum-email">—</span></div>
+      <div class="summary-row"><span class="summary-label">💬 Message</span><span class="summary-value" id="sum-desc" style="text-align:right;max-width:60%">—</span></div>
+      <div style="margin-top:20px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px;font-size:13px;color:var(--muted)">
+        ⚠️ Your request will be sent for owner approval. You'll receive a response to your email.
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn btn-outline" onclick="goStep(2)">← Back</button>
+      <button class="btn btn-primary btn-lg" id="submit-btn" onclick="submitRequest()">🚀 Send Booking Request</button>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="success" style="display:none" class="card success-card">
+    <div class="success-icon">🎉</div>
+    <h2>Request Sent!</h2>
+    <p>Your booking request has been submitted. The owner will review and respond to <span id="success-email" style="color:var(--accent4)"></span> shortly.</p>
+    <button class="btn btn-primary" onclick="resetForm()">📅 Book Another</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://jcnqistogwhpaocxxolt.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjbnFpc3RvZ3docGFvY3h4b2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NzM0NTIsImV4cCI6MjA5NzI0OTQ1Mn0.qqfxRf9EcnXdsAD8MTfjLZoIIpYOuOQuap3V0Q_HB5M';
+const H={'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+
+async function db(path,opts={}){
+  const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{...opts,headers:{...H,...(opts.headers||{})}});
+  if(!r.ok){const e=await r.json();throw new Error(e.message||'DB Error');}
+  return opts.method&&opts.method!=='GET'?(r.status===204?null:r.json()):r.json();
+}
+
+let bYear=new Date().getFullYear(), bMonth=new Date().getMonth();
+let selectedDate=null, selectedStart=null, selectedEnd=null;
+let existingSchedules=[], existingRequests=[];
+
+async function loadExisting(){
+  [existingSchedules, existingRequests] = await Promise.all([
+    db('schedules?select=date,start_time,end_time&status=eq.upcoming'),
+    db('booking_requests?select=requested_date,start_time,end_time&status=in.(pending,accepted,accepted_with_remarks)')
+  ]);
+  renderBCal();
+}
+
+function renderBCal(){
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('b-month-label').textContent=months[bMonth]+' '+bYear;
+  document.getElementById('b-day-names').innerHTML=['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=>`<div class="mini-dname">${d}</div>`).join('');
+  const first=new Date(bYear,bMonth,1).getDay();
+  const days=new Date(bYear,bMonth+1,0).getDate();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const prevDays=new Date(bYear,bMonth,0).getDate();
+  let html='';
+  for(let i=0;i<first;i++) html+=`<div class="mini-day other">${prevDays-first+i+1}</div>`;
+  for(let d=1;d<=days;d++){
+    const dateStr=`${bYear}-${String(bMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dObj=new Date(bYear,bMonth,d);
+    const isPast=dObj<today;
+    const isSelected=dateStr===selectedDate;
+    const cls=['mini-day',isPast?'disabled':'',isSelected?'selected':''].filter(Boolean).join(' ');
+    html+=`<div class="${cls}" onclick="${isPast?'':'selectDate(\''+dateStr+'\')'}">${d}</div>`;
+  }
+  document.getElementById('b-cal-days').innerHTML=html;
+}
+
+function bCalPrev(){bMonth--;if(bMonth<0){bMonth=11;bYear--;}renderBCal();}
+function bCalNext(){bMonth++;if(bMonth>11){bMonth=0;bYear++;}renderBCal();}
+
+function selectDate(d){
+  selectedDate=d; selectedStart=null; selectedEnd=null;
+  renderBCal(); renderSlots();
+}
+
+function renderSlots(){
+  if(!selectedDate){document.getElementById('slots-grid').innerHTML='';return;}
+  document.getElementById('slots-label').textContent='Available times for '+selectedDate+':';
+  // Predefined slots
+  const preset=[
+    ['09:00','09:30'],['09:30','10:00'],['10:00','10:30'],['10:30','11:00'],
+    ['11:00','11:30'],['11:30','12:00'],['14:00','14:30'],['14:30','15:00'],
+    ['15:00','15:30'],['15:30','16:00'],['16:00','16:30'],['16:30','17:00']
+  ];
+  const busy=[
+    ...existingSchedules.filter(s=>s.date===selectedDate),
+    ...existingRequests.filter(r=>r.requested_date===selectedDate)
+  ];
+  function isBusy(s,e){
+    return busy.some(b=>{
+      const bS=b.start_time.substring(0,5), bE=b.end_time.substring(0,5);
+      return s<bE&&e>bS;
+    });
+  }
+  document.getElementById('slots-grid').innerHTML=preset.map(([s,e])=>{
+    const busy=isBusy(s,e);
+    const sel=selectedStart===s&&selectedEnd===e;
+    const cls=`slot${busy?' busy':sel?' selected':''}`;
+    return `<div class="${cls}" onclick="${busy?'':'pickSlot(\''+s+'\',\''+e+'\')'}">${fmt(s)}<br><span style="font-size:10px;opacity:.7">${busy?'Busy':fmt(e)}</span></div>`;
+  }).join('');
+}
+
+function pickSlot(s,e){
+  selectedStart=s; selectedEnd=e;
+  document.getElementById('custom-start').value=s;
+  document.getElementById('custom-end').value=e;
+  renderSlots();
+}
+
+function fmt(t){if(!t)return '';const[h,m]=t.split(':');const hh=parseInt(h);return(hh%12||12)+':'+m+(hh>=12?' PM':' AM');}
+
+// STEPS
+function goStep2(){
+  const d=selectedDate;
+  const s=document.getElementById('custom-start').value;
+  const e=document.getElementById('custom-end').value;
+  if(!d){toast('Please select a date','error');return;}
+  if(!s||!e){toast('Please select a time','error');return;}
+  if(s>=e){toast('End time must be after start time','error');return;}
+  selectedStart=s; selectedEnd=e;
+  goStep(2);
+}
+
+function goStep3(){
+  const n=document.getElementById('v-name').value.trim();
+  const em=document.getElementById('v-email').value.trim();
+  const desc=document.getElementById('v-desc').value.trim();
+  if(!n||!em||!desc){toast('Please fill all fields','error');return;}
+  if(!/\S+@\S+\.\S+/.test(em)){toast('Please enter a valid email','error');return;}
+  document.getElementById('sum-date').textContent=selectedDate;
+  document.getElementById('sum-time').textContent=fmt(selectedStart)+' – '+fmt(selectedEnd);
+  document.getElementById('sum-name').textContent=n;
+  document.getElementById('sum-email').textContent=em;
+  document.getElementById('sum-desc').textContent=desc;
+  goStep(3);
+}
+
+function goStep(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById('step'+i).style.display=i===n?'':'none';
+    const sc=document.getElementById('sc'+i);
+    if(i<n){sc.className='step-circle done';sc.textContent='✓';}
+    else if(i===n){sc.className='step-circle active';sc.textContent=i;}
+    else{sc.className='step-circle';sc.textContent=i;}
+    if(i<3){const sl=document.getElementById('sl'+i);sl.className='step-line'+(i<n?' done':'');}
+  });
+}
+
+async function submitRequest(){
+  const btn=document.getElementById('submit-btn');
+  btn.textContent='Sending...'; btn.disabled=true;
+  try{
+    await db('booking_requests',{
+      method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({
+        visitor_name:document.getElementById('v-name').value.trim(),
+        visitor_email:document.getElementById('v-email').value.trim(),
+        requested_date:selectedDate,
+        start_time:selectedStart,
+        end_time:selectedEnd,
+        description:document.getElementById('v-desc').value.trim()
+      })
+    });
+    document.getElementById('success-email').textContent=document.getElementById('v-email').value.trim();
+    [1,2,3].forEach(i=>document.getElementById('step'+i).style.display='none');
+    document.getElementById('step-indicators').style.display='none';
+    document.getElementById('success').style.display='';
+  }catch(e){toast(e.message,'error');btn.textContent='🚀 Send Booking Request';btn.disabled=false;}
+}
+
+function resetForm(){
+  selectedDate=null;selectedStart=null;selectedEnd=null;
+  document.getElementById('v-name').value='';
+  document.getElementById('v-email').value='';
+  document.getElementById('v-desc').value='';
+  document.getElementById('step-indicators').style.display='flex';
+  document.getElementById('success').style.display='none';
+  goStep(1); renderBCal(); renderSlots();
+}
+
+let toastTimer;
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='show '+(type||'');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='',3000);
+}
+
+loadExisting();
+</script>
+</body>
+</html>

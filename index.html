@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AuraScheduler — Owner Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0d0d1a;
+    --surface: #13132b;
+    --card: #1a1a35;
+    --border: #2a2a55;
+    --accent1: #7c3aed;
+    --accent2: #a855f7;
+    --accent3: #06b6d4;
+    --accent4: #10b981;
+    --danger: #ef4444;
+    --warn: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --glow: rgba(124,58,237,0.3);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family:'Inter',sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed; left:0; top:0; bottom:0; width:240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display:flex; flex-direction:column;
+    z-index:100;
+  }
+  .logo {
+    padding:24px 20px;
+    font-size:20px; font-weight:700;
+    background: linear-gradient(135deg,#7c3aed,#a855f7,#06b6d4);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    border-bottom:1px solid var(--border);
+  }
+  .logo span { font-size:12px; display:block; color:var(--muted); -webkit-text-fill-color:var(--muted); font-weight:400; margin-top:2px; }
+
+  nav { padding:16px 12px; flex:1; }
+  .nav-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:10px;
+    cursor:pointer; margin-bottom:4px;
+    color:var(--muted); font-size:14px; font-weight:500;
+    transition:all .2s;
+  }
+  .nav-item:hover { background:var(--card); color:var(--text); }
+  .nav-item.active { background:rgba(124,58,237,.2); color:#a855f7; border:1px solid rgba(124,58,237,.3); }
+  .nav-icon { font-size:18px; }
+
+  .sidebar-footer {
+    padding:16px; border-top:1px solid var(--border);
+    font-size:12px; color:var(--muted);
+  }
+
+  /* MAIN */
+  .main { margin-left:240px; min-height:100vh; }
+
+  .topbar {
+    position:sticky; top:0; z-index:50;
+    background:rgba(13,13,26,.8); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    padding:16px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .page-title { font-size:20px; font-weight:600; }
+  .topbar-right { display:flex; gap:12px; align-items:center; }
+
+  .btn {
+    padding:9px 18px; border-radius:10px; border:none;
+    font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-primary { background:var(--accent1); color:#fff; }
+  .btn-primary:hover { background:#6d28d9; box-shadow:0 0 20px var(--glow); }
+  .btn-outline { background:transparent; color:var(--accent2); border:1px solid var(--accent1); }
+  .btn-outline:hover { background:rgba(124,58,237,.15); }
+  .btn-sm { padding:6px 12px; font-size:12px; border-radius:7px; }
+  .btn-danger { background:var(--danger); color:#fff; }
+  .btn-success { background:var(--accent4); color:#fff; }
+  .btn-warn { background:var(--warn); color:#000; }
+
+  .content { padding:28px; }
+
+  /* STATS */
+  .stats-grid {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px;
+  }
+  .stat-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:20px;
+    position:relative; overflow:hidden;
+  }
+  .stat-card::before {
+    content:''; position:absolute; top:-30px; right:-30px;
+    width:80px; height:80px; border-radius:50%;
+    opacity:.15;
+  }
+  .stat-card:nth-child(1)::before { background:#7c3aed; }
+  .stat-card:nth-child(2)::before { background:#06b6d4; }
+  .stat-card:nth-child(3)::before { background:#10b981; }
+  .stat-card:nth-child(4)::before { background:#f59e0b; }
+  .stat-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .stat-value { font-size:32px; font-weight:700; margin:6px 0 2px; }
+  .stat-card:nth-child(1) .stat-value { color:#a855f7; }
+  .stat-card:nth-child(2) .stat-value { color:#06b6d4; }
+  .stat-card:nth-child(3) .stat-value { color:#10b981; }
+  .stat-card:nth-child(4) .stat-value { color:#f59e0b; }
+  .stat-sub { font-size:12px; color:var(--muted); }
+
+  /* SECTIONS */
+  .section { margin-bottom:28px; }
+  .section-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .section-title { font-size:16px; font-weight:600; }
+
+  /* CALENDAR */
+  .calendar-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  }
+  .cal-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; border-bottom:1px solid var(--border);
+  }
+  .cal-month { font-size:16px; font-weight:600; }
+  .cal-nav { background:none; border:1px solid var(--border); color:var(--text); padding:5px 10px; border-radius:7px; cursor:pointer; font-size:14px; }
+  .cal-nav:hover { background:var(--border); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+  .cal-day-name {
+    text-align:center; padding:10px 4px; font-size:11px;
+    color:var(--muted); font-weight:600; text-transform:uppercase;
+    border-bottom:1px solid var(--border);
+  }
+  .cal-day {
+    aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:13px; cursor:pointer; border-radius:0;
+    position:relative; transition:all .15s; padding:4px; border:1px solid transparent;
+  }
+  .cal-day:hover { background:rgba(124,58,237,.15); }
+  .cal-day.today { background:rgba(124,58,237,.25); color:#a855f7; font-weight:700; }
+  .cal-day.selected { background:var(--accent1); color:#fff; border-radius:8px; }
+  .cal-day.other-month { color:var(--border); }
+  .cal-day.has-event::after {
+    content:''; position:absolute; bottom:4px;
+    width:5px; height:5px; border-radius:50%; background:#a855f7;
+  }
+  .cal-day.selected::after { background:#fff; }
+
+  /* SCHEDULE TABLE */
+  .table-card {
+    background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  }
+  table { width:100%; border-collapse:collapse; }
+  th {
+    padding:12px 16px; text-align:left; font-size:11px;
+    color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px;
+    border-bottom:1px solid var(--border); background:rgba(0,0,0,.2);
+  }
+  td { padding:13px 16px; font-size:13px; border-bottom:1px solid rgba(42,42,85,.5); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(124,58,237,.06); }
+
+  /* BADGE */
+  .badge {
+    display:inline-flex; padding:3px 9px; border-radius:20px;
+    font-size:11px; font-weight:600; text-transform:capitalize;
+  }
+  .badge-upcoming { background:rgba(6,182,212,.15); color:#06b6d4; border:1px solid rgba(6,182,212,.3); }
+  .badge-completed { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); }
+  .badge-cancelled { background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+  .badge-rescheduled { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+  .badge-pending { background:rgba(168,85,247,.15); color:#a855f7; border:1px solid rgba(168,85,247,.3); }
+  .badge-accepted { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); }
+  .badge-declined { background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+
+  /* CATEGORY */
+  .cat-dot { display:inline-flex; gap:6px; align-items:center; }
+  .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+  /* MODAL */
+  .modal-bg {
+    position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
+    z-index:200; display:none; align-items:center; justify-content:center;
+  }
+  .modal-bg.open { display:flex; }
+  .modal {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:18px; padding:28px; width:520px; max-height:90vh; overflow-y:auto;
+  }
+  .modal h2 { font-size:18px; font-weight:700; margin-bottom:20px; }
+  .form-group { margin-bottom:16px; }
+  label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+  input, select, textarea {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); border-radius:9px; padding:10px 13px; font-size:14px; font-family:'Inter',sans-serif;
+    outline:none; transition:border-color .2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color:var(--accent1); }
+  textarea { resize:vertical; min-height:80px; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+
+  /* BOOKING REQUESTS */
+  .request-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:16px; margin-bottom:12px;
+  }
+  .request-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .request-name { font-weight:600; font-size:14px; }
+  .request-email { font-size:12px; color:var(--muted); margin-top:2px; }
+  .request-time { font-size:13px; color:var(--accent3); margin:6px 0; }
+  .request-desc { font-size:13px; color:var(--muted); margin-bottom:12px; }
+  .request-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+  /* TOAST */
+  #toast {
+    position:fixed; bottom:24px; right:24px; z-index:999;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:12px; padding:14px 20px; font-size:14px;
+    transform:translateY(100px); opacity:0; transition:all .3s;
+    max-width:320px;
+  }
+  #toast.show { transform:translateY(0); opacity:1; }
+  #toast.success { border-left:3px solid var(--accent4); }
+  #toast.error { border-left:3px solid var(--danger); }
+
+  /* TABS */
+  .tabs { display:flex; gap:4px; background:var(--surface); border-radius:10px; padding:4px; margin-bottom:20px; }
+  .tab {
+    flex:1; padding:8px; text-align:center; border-radius:7px;
+    cursor:pointer; font-size:13px; font-weight:500; color:var(--muted);
+    transition:all .2s;
+  }
+  .tab.active { background:var(--accent1); color:#fff; }
+
+  /* EMPTY */
+  .empty { text-align:center; padding:40px; color:var(--muted); }
+  .empty-icon { font-size:40px; margin-bottom:12px; }
+
+  /* LOADING */
+  .loader {
+    display:flex; gap:6px; justify-content:center; padding:30px;
+  }
+  .loader span {
+    width:8px; height:8px; border-radius:50%; background:var(--accent1);
+    animation:bounce .6s infinite alternate;
+  }
+  .loader span:nth-child(2) { animation-delay:.15s; background:var(--accent2); }
+  .loader span:nth-child(3) { animation-delay:.3s; background:var(--accent3); }
+  @keyframes bounce { to { transform:translateY(-10px); opacity:.5; } }
+
+  /* REMARKS MODAL */
+  #remarksInput { margin-top:10px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">✦ AuraScheduler<span>Owner Dashboard</span></div>
+  <nav>
+    <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">🏠</span> Dashboard</div>
+    <div class="nav-item" onclick="showPage('calendar')"><span class="nav-icon">📅</span> Calendar</div>
+    <div class="nav-item" onclick="showPage('schedules')"><span class="nav-icon">📋</span> My Schedules</div>
+    <div class="nav-item" onclick="showPage('requests')"><span class="nav-icon">📬</span> Booking Requests <span id="pending-badge" style="margin-left:auto;background:#7c3aed;color:#fff;font-size:10px;padding:1px 7px;border-radius:10px;display:none"></span></div>
+  </nav>
+  <div class="sidebar-footer">
+    🔗 <a href="booking.html" target="_blank" style="color:var(--accent2);text-decoration:none">Open Booking Page</a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard</div>
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="openAddModal()">＋ Add Schedule</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD PAGE -->
+    <div id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Schedules</div>
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Upcoming</div>
+          <div class="stat-value" id="stat-upcoming">—</div>
+          <div class="stat-sub">Next events</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value" id="stat-completed">—</div>
+          <div class="stat-sub">Done ✓</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending Requests</div>
+          <div class="stat-value" id="stat-pending">—</div>
+          <div class="stat-sub">Awaiting review</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="section">
+          <div class="section-header"><span class="section-title">📅 Today's Schedule</span></div>
+          <div id="today-list"><div class="loader"><span></span><span></span><span></span></div></div>
+        </div>
+        <div class="section">
+          <div class="section-header"><span class="section-title">📬 Recent Requests</span></div>
+          <div id="recent-requests"><div class="loader"><span></span><span></span><span></span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR PAGE -->
+    <div id="page-calendar" style="display:none">
+      <div class="calendar-card" style="margin-bottom:20px">
+        <div class="cal-header">
+          <button class="cal-nav" onclick="calPrev()">◀</button>
+          <span class="cal-month" id="cal-month-label"></span>
+          <button class="cal-nav" onclick="calNext()">▶</button>
+        </div>
+        <div class="cal-grid" id="cal-day-names"></div>
+        <div class="cal-grid" id="cal-days"></div>
+      </div>
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title" id="cal-selected-label">Select a date to view schedules</span>
+          <button class="btn btn-primary btn-sm" onclick="openAddModal()">＋ Add</button>
+        </div>
+        <div id="cal-schedule-list"></div>
+      </div>
+    </div>
+
+    <!-- SCHEDULES PAGE -->
+    <div id="page-schedules" style="display:none">
+      <div class="section-header" style="margin-bottom:16px">
+        <div class="tabs" style="flex:1;margin-bottom:0;margin-right:16px">
+          <div class="tab active" onclick="filterSchedules('all',this)">All</div>
+          <div class="tab" onclick="filterSchedules('upcoming',this)">Upcoming</div>
+          <div class="tab" onclick="filterSchedules('completed',this)">Completed</div>
+          <div class="tab" onclick="filterSchedules('cancelled',this)">Cancelled</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddModal()">＋ Add Schedule</button>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead><tr>
+            <th>Title</th><th>Date</th><th>Time</th><th>Category</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="schedules-tbody">
+            <tr><td colspan="6"><div class="loader"><span></span><span></span><span></span></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- REQUESTS PAGE -->
+    <div id="page-requests" style="display:none">
+      <div class="tabs" style="max-width:400px">
+        <div class="tab active" onclick="filterRequests('pending',this)">Pending</div>
+        <div class="tab" onclick="filterRequests('accepted',this)">Accepted</div>
+        <div class="tab" onclick="filterRequests('declined',this)">Declined</div>
+        <div class="tab" onclick="filterRequests('all',this)">All</div>
+      </div>
+      <div id="requests-list"><div class="loader"><span></span><span></span><span></span></div></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ADD/EDIT SCHEDULE MODAL -->
+<div class="modal-bg" id="schedule-modal">
+  <div class="modal">
+    <h2 id="modal-title">Add Schedule</h2>
+    <div class="form-group">
+      <label>Title *</label>
+      <input id="f-title" type="text" placeholder="Meeting with team..."/>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="f-desc" placeholder="Details..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date *</label>
+        <input id="f-date" type="date"/>
+      </div>
+      <div class="form-group">
+        <label>Category *</label>
+        <select id="f-cat">
+          <option value="">Select...</option>
+          <option>Meeting</option>
+          <option>Brainstorming</option>
+          <option>Event Participation</option>
+          <option>Learnings</option>
+          <option>Others</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Start Time *</label>
+        <input id="f-start" type="time"/>
+      </div>
+      <div class="form-group">
+        <label>End Time *</label>
+        <input id="f-end" type="time"/>
+      </div>
+    </div>
+    <div class="form-group" id="f-status-group">
+      <label>Status</label>
+      <select id="f-status">
+        <option value="upcoming">Upcoming</option>
+        <option value="completed">Completed</option>
+        <option value="rescheduled">Rescheduled</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('schedule-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSchedule()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- REMARKS MODAL -->
+<div class="modal-bg" id="remarks-modal">
+  <div class="modal" style="width:420px">
+    <h2 id="remarks-modal-title">Add Remarks</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Optional message to the visitor:</p>
+    <textarea id="remarks-text" placeholder="e.g. Please bring your portfolio..." rows="4"></textarea>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('remarks-modal')">Cancel</button>
+      <button class="btn btn-success" id="remarks-confirm-btn">✓ Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://jcnqistogwhpaocxxolt.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjbnFpc3RvZ3docGFvY3h4b2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NzM0NTIsImV4cCI6MjA5NzI0OTQ1Mn0.qqfxRf9EcnXdsAD8MTfjLZoIIpYOuOQuap3V0Q_HB5M';
+
+const H = {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+
+async function db(path, opts={}) {
+  const r = await fetch(SUPABASE_URL+'/rest/v1/'+path, {...opts, headers:{...H,...(opts.headers||{})}});
+  if (!r.ok) { const e=await r.json(); throw new Error(e.message||'DB Error'); }
+  return opts.method && opts.method!=='GET' ? (r.status===204?null:r.json()) : r.json();
+}
+
+// ── STATE ──
+let allSchedules = [], allRequests = [], editingId = null;
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+let calSelected = null, schedulesFilter = 'all', requestsFilter = 'pending';
+let currentPage = 'dashboard';
+
+// ── NAVIGATION ──
+function showPage(p) {
+  currentPage = p;
+  ['dashboard','calendar','schedules','requests'].forEach(x=>{
+    document.getElementById('page-'+x).style.display = x===p?'':'none';
+    document.querySelectorAll('.nav-item').forEach((n,i)=>{
+      n.classList.toggle('active', ['dashboard','calendar','schedules','requests'][i]===p);
+    });
+  });
+  document.getElementById('page-title').textContent = {dashboard:'Dashboard',calendar:'Calendar',schedules:'My Schedules',requests:'Booking Requests'}[p];
+  if(p==='dashboard') loadDashboard();
+  if(p==='calendar') { renderCalendar(); loadCalendarDay(calSelected); }
+  if(p==='schedules') renderSchedulesTable();
+  if(p==='requests') renderRequestsList();
+}
+
+// ── LOAD ALL DATA ──
+async function loadAll() {
+  try {
+    [allSchedules, allRequests] = await Promise.all([
+      db('schedules?select=*&order=date.asc,start_time.asc'),
+      db('booking_requests?select=*&order=created_at.desc')
+    ]);
+    updateStats();
+    loadDashboard();
+    updatePendingBadge();
+  } catch(e) { toast('Error loading data: '+e.message,'error'); }
+}
+
+function updateStats() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('stat-total').textContent = allSchedules.length;
+  document.getElementById('stat-upcoming').textContent = allSchedules.filter(s=>s.status==='upcoming').length;
+  document.getElementById('stat-completed').textContent = allSchedules.filter(s=>s.status==='completed').length;
+  document.getElementById('stat-pending').textContent = allRequests.filter(r=>r.status==='pending').length;
+}
+
+function updatePendingBadge() {
+  const n = allRequests.filter(r=>r.status==='pending').length;
+  const b = document.getElementById('pending-badge');
+  b.textContent = n; b.style.display = n>0?'inline':'none';
+}
+
+function loadDashboard() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayList = allSchedules.filter(s=>s.date===today);
+  const el = document.getElementById('today-list');
+  if(todayList.length===0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🗓️</div>No schedules today</div>`;
+  } else {
+    el.innerHTML = todayList.map(s=>`
+      <div class="request-card">
+        <div class="request-header">
+          <div><div class="request-name">${s.title}</div><div class="request-email">${s.category}</div></div>
+          <span class="badge badge-${s.status}">${s.status}</span>
+        </div>
+        <div class="request-time">🕐 ${fmt(s.start_time)} – ${fmt(s.end_time)}</div>
+        ${s.description?`<div class="request-desc">${s.description}</div>`:''}
+      </div>`).join('');
+  }
+
+  const recentReqs = allRequests.slice(0,3);
+  const rel = document.getElementById('recent-requests');
+  if(recentReqs.length===0) {
+    rel.innerHTML = `<div class="empty"><div class="empty-icon">📬</div>No requests yet</div>`;
+  } else {
+    rel.innerHTML = recentReqs.map(r=>`
+      <div class="request-card">
+        <div class="request-header">
+          <div><div class="request-name">${r.visitor_name}</div><div class="request-email">${r.visitor_email}</div></div>
+          <span class="badge badge-${r.status}">${r.status}</span>
+        </div>
+        <div class="request-time">📅 ${r.requested_date} · ${fmt(r.start_time)}–${fmt(r.end_time)}</div>
+        <div class="request-desc">${r.description}</div>
+      </div>`).join('');
+  }
+}
+
+// ── CALENDAR ──
+function renderCalendar() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent = months[calMonth]+' '+calYear;
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('cal-day-names').innerHTML = dayNames.map(d=>`<div class="cal-day-name">${d}</div>`).join('');
+
+  const first = new Date(calYear,calMonth,1).getDay();
+  const days = new Date(calYear,calMonth+1,0).getDate();
+  const prevDays = new Date(calYear,calMonth,0).getDate();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Dates that have events
+  const eventDates = new Set(allSchedules.map(s=>s.date));
+
+  let html='';
+  for(let i=0;i<first;i++) {
+    const d = prevDays-first+i+1;
+    html+=`<div class="cal-day other-month">${d}</div>`;
+  }
+  for(let d=1;d<=days;d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const classes = ['cal-day', today===dateStr?'today':'', calSelected===dateStr?'selected':'', eventDates.has(dateStr)?'has-event':''].filter(Boolean).join(' ');
+    html+=`<div class="${classes}" onclick="selectCalDay('${dateStr}')">${d}</div>`;
+  }
+  const remaining = 42-first-days;
+  for(let d=1;d<=remaining;d++) html+=`<div class="cal-day other-month">${d}</div>`;
+  document.getElementById('cal-days').innerHTML=html;
+}
+
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+
+function selectCalDay(d) {
+  calSelected=d; renderCalendar(); loadCalendarDay(d);
+}
+
+function loadCalendarDay(d) {
+  if(!d) { document.getElementById('cal-schedule-list').innerHTML=''; return; }
+  document.getElementById('cal-selected-label').textContent = '📅 '+d;
+  const items = allSchedules.filter(s=>s.date===d);
+  const el = document.getElementById('cal-schedule-list');
+  if(items.length===0) {
+    el.innerHTML=`<div class="empty"><div class="empty-icon">🗓️</div>No schedules on this date</div>`;
+  } else {
+    el.innerHTML=`<div class="table-card"><table>
+      <thead><tr><th>Time</th><th>Title</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${items.map(s=>`<tr>
+        <td style="color:var(--accent3)">${fmt(s.start_time)}–${fmt(s.end_time)}</td>
+        <td>${s.title}</td>
+        <td><span class="cat-dot"><span class="dot" style="background:${catColor(s.category)}"></span>${s.category}</span></td>
+        <td><span class="badge badge-${s.status}">${s.status}</span></td>
+        <td><button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(s)})'>Edit</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+}
+
+// ── SCHEDULES TABLE ──
+function renderSchedulesTable() {
+  const list = schedulesFilter==='all'?allSchedules:allSchedules.filter(s=>s.status===schedulesFilter);
+  const tbody = document.getElementById('schedules-tbody');
+  if(list.length===0) {
+    tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="empty-icon">📋</div>No schedules found</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=list.map(s=>`<tr>
+    <td><b>${s.title}</b>${s.description?`<br><span style="font-size:11px;color:var(--muted)">${s.description.substring(0,60)}...</span>`:''}</td>
+    <td>${s.date}</td>
+    <td style="color:var(--accent3)">${fmt(s.start_time)}–${fmt(s.end_time)}</td>
+    <td><span class="cat-dot"><span class="dot" style="background:${catColor(s.category)}"></span>${s.category}</span></td>
+    <td><span class="badge badge-${s.status}">${s.status}</span></td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(s)})'>✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">🗑️</button>
+    </td>
+  </tr>`).join('');
+}
+
+function filterSchedules(f,el) {
+  schedulesFilter=f;
+  document.querySelectorAll('#page-schedules .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderSchedulesTable();
+}
+
+// ── REQUESTS ──
+function renderRequestsList() {
+  const list = requestsFilter==='all'?allRequests:allRequests.filter(r=>r.status===requestsFilter||
+    (requestsFilter==='accepted'&&(r.status==='accepted'||r.status==='accepted_with_remarks')));
+  const el = document.getElementById('requests-list');
+  if(list.length===0) {
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📬</div>No requests in this category</div>`; return;
+  }
+  el.innerHTML=list.map(r=>`
+    <div class="request-card">
+      <div class="request-header">
+        <div>
+          <div class="request-name">👤 ${r.visitor_name}</div>
+          <div class="request-email">✉️ ${r.visitor_email}</div>
+        </div>
+        <span class="badge badge-${r.status==='accepted_with_remarks'?'accepted':r.status}">${r.status.replace('_',' ')}</span>
+      </div>
+      <div class="request-time">📅 ${r.requested_date} · 🕐 ${fmt(r.start_time)} – ${fmt(r.end_time)}</div>
+      <div class="request-desc">${r.description}</div>
+      ${r.owner_remarks?`<div style="font-size:12px;color:var(--accent4);margin-bottom:8px">📝 Remarks: ${r.owner_remarks}</div>`:''}
+      ${r.status==='pending'?`
+      <div class="request-actions">
+        <button class="btn btn-success btn-sm" onclick="respondRequest('${r.id}','accepted')">✓ Accept</button>
+        <button class="btn btn-warn btn-sm" onclick="openRemarks('${r.id}','accepted_with_remarks')">📝 Accept w/ Remarks</button>
+        <button class="btn btn-outline btn-sm" onclick="respondRequest('${r.id}','reschedule_requested')">🔄 Request Reschedule</button>
+        <button class="btn btn-danger btn-sm" onclick="respondRequest('${r.id}','declined')">✗ Decline</button>
+      </div>`:''}
+    </div>`).join('');
+}
+
+function filterRequests(f,el) {
+  requestsFilter=f;
+  document.querySelectorAll('#page-requests .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderRequestsList();
+}
+
+async function respondRequest(id, status, remarks='') {
+  try {
+    await db(`booking_requests?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({status, owner_remarks:remarks, updated_at:new Date().toISOString()})
+    });
+    const i = allRequests.findIndex(r=>r.id===id);
+    if(i>-1){allRequests[i].status=status;allRequests[i].owner_remarks=remarks;}
+    updateStats(); updatePendingBadge(); renderRequestsList();
+    toast('Request '+status.replace('_',' ')+'!','success');
+  } catch(e){toast(e.message,'error');}
+}
+
+let remarksCb=null;
+function openRemarks(id, status) {
+  document.getElementById('remarks-modal-title').textContent = 'Accept with Remarks';
+  document.getElementById('remarks-text').value='';
+  remarksCb = ()=>{ respondRequest(id,status,document.getElementById('remarks-text').value); closeModal('remarks-modal'); };
+  document.getElementById('remarks-confirm-btn').onclick = remarksCb;
+  openModal('remarks-modal');
+}
+
+// ── SCHEDULE CRUD ──
+function openAddModal() {
+  editingId=null;
+  document.getElementById('modal-title').textContent='Add Schedule';
+  document.getElementById('f-title').value='';
+  document.getElementById('f-desc').value='';
+  document.getElementById('f-date').value=calSelected||new Date().toISOString().split('T')[0];
+  document.getElementById('f-cat').value='';
+  document.getElementById('f-start').value='09:00';
+  document.getElementById('f-end').value='10:00';
+  document.getElementById('f-status').value='upcoming';
+  document.getElementById('f-status-group').style.display='none';
+  openModal('schedule-modal');
+}
+
+function openEditModal(s) {
+  editingId=s.id;
+  document.getElementById('modal-title').textContent='Edit Schedule';
+  document.getElementById('f-title').value=s.title;
+  document.getElementById('f-desc').value=s.description||'';
+  document.getElementById('f-date').value=s.date;
+  document.getElementById('f-cat').value=s.category;
+  document.getElementById('f-start').value=s.start_time.substring(0,5);
+  document.getElementById('f-end').value=s.end_time.substring(0,5);
+  document.getElementById('f-status').value=s.status;
+  document.getElementById('f-status-group').style.display='';
+  openModal('schedule-modal');
+}
+
+async function saveSchedule() {
+  const title=document.getElementById('f-title').value.trim();
+  const date=document.getElementById('f-date').value;
+  const cat=document.getElementById('f-cat').value;
+  const start=document.getElementById('f-start').value;
+  const end=document.getElementById('f-end').value;
+  if(!title||!date||!cat||!start||!end){toast('Please fill all required fields','error');return;}
+
+  const payload={
+    title, date, category:cat,
+    start_time:start, end_time:end,
+    description:document.getElementById('f-desc').value.trim(),
+    updated_at:new Date().toISOString()
+  };
+  if(!editingId) payload.status='upcoming';
+  else payload.status=document.getElementById('f-status').value;
+
+  try {
+    if(editingId) {
+      await db(`schedules?id=eq.${editingId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+      const i=allSchedules.findIndex(s=>s.id===editingId);
+      if(i>-1) allSchedules[i]={...allSchedules[i],...payload};
+      toast('Schedule updated!','success');
+    } else {
+      const res=await db('schedules',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+      allSchedules.push(Array.isArray(res)?res[0]:res);
+      toast('Schedule added!','success');
+    }
+    closeModal('schedule-modal');
+    updateStats();
+    if(currentPage==='schedules') renderSchedulesTable();
+    if(currentPage==='calendar'){renderCalendar();loadCalendarDay(calSelected);}
+    if(currentPage==='dashboard') loadDashboard();
+  } catch(e){toast(e.message,'error');}
+}
+
+async function deleteSchedule(id) {
+  if(!confirm('Delete this schedule?')) return;
+  try {
+    await db(`schedules?id=eq.${id}`,{method:'DELETE'});
+    allSchedules=allSchedules.filter(s=>s.id!==id);
+    updateStats(); renderSchedulesTable();
+    toast('Schedule deleted','success');
+  } catch(e){toast(e.message,'error');}
+}
+
+// ── UTILS ──
+function fmt(t) {
+  if(!t) return '';
+  const [h,m]=t.split(':');
+  const hh=parseInt(h); const ampm=hh>=12?'PM':'AM';
+  return (hh%12||12)+':'+m+' '+ampm;
+}
+
+function catColor(c) {
+  return {Meeting:'#7c3aed',Brainstorming:'#06b6d4','Event Participation':'#10b981',Learnings:'#f59e0b',Others:'#94a3b8'}[c]||'#94a3b8';
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+let toastTimer;
+function toast(msg,type='success') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+(type||'');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.className='',3000);
+}
+
+// Close modal on bg click
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  bg.addEventListener('click',e=>{ if(e.target===bg) bg.classList.remove('open'); });
+});
+
+// Init
+loadAll();
+</script>
+</body>
+</html>
