@@ -1,6 +1,7 @@
 {
   "rewrites": [
-    { "source": "/booking", "destination": "/booking.html" },
-    { "source": "/", "destination": "/index.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/owner", "destination": "/index.html" },
+    { "source": "/book", "destination": "/index.html" }
   ]
 }

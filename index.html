@@ -2,815 +2,770 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>AuraScheduler — Owner Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MyScheduler</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
 
-  :root {
-    --bg: #0d0d1a;
-    --surface: #13132b;
-    --card: #1a1a35;
-    --border: #2a2a55;
-    --accent1: #7c3aed;
-    --accent2: #a855f7;
-    --accent3: #06b6d4;
-    --accent4: #10b981;
-    --danger: #ef4444;
-    --warn: #f59e0b;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --glow: rgba(124,58,237,0.3);
-  }
+:root{
+  --bg:#0d1117;
+  --bg2:#161b22;
+  --bg3:#21262d;
+  --border:#30363d;
+  --accent:#238636;
+  --accent2:#2ea043;
+  --text:#e6edf3;
+  --text2:#8b949e;
+  --text3:#484f58;
+  --green:#3fb950;
+  --red:#f85149;
+  --yellow:#d29922;
+  --blue:#58a6ff;
+  --orange:#f0883e;
+}
 
-  * { margin:0; padding:0; box-sizing:border-box; }
+/* TOPBAR */
+.topbar{background:#161b22;border-bottom:1px solid #30363d;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.brand{font-size:1.25rem;font-weight:700;color:#e6edf3;letter-spacing:-.5px}
+.brand span{color:#3fb950}
+.topbar-right{display:flex;gap:10px;align-items:center}
 
-  body {
-    font-family:'Inter',sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-  }
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-size:.875rem;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px;line-height:1}
+.btn-primary{background:#238636;border-color:#2ea043;color:#fff}
+.btn-primary:hover{background:#2ea043}
+.btn-ghost{background:transparent;border-color:#30363d;color:#e6edf3}
+.btn-ghost:hover{background:#21262d;border-color:#8b949e}
+.btn-success{background:#238636;border-color:#2ea043;color:#fff}
+.btn-success:hover{background:#2ea043}
+.btn-danger{background:#da3633;border-color:#f85149;color:#fff}
+.btn-danger:hover{background:#f85149}
+.btn-warning{background:#9e6a03;border-color:#d29922;color:#fff}
+.btn-warning:hover{background:#d29922}
+.btn-blue{background:#1f6feb;border-color:#58a6ff;color:#fff}
+.btn-blue:hover{background:#388bfd}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+.badge-n{background:#da3633;color:#fff;border-radius:20px;padding:1px 7px;font-size:.72rem;font-weight:600;margin-left:4px}
 
-  /* SIDEBAR */
-  .sidebar {
-    position: fixed; left:0; top:0; bottom:0; width:240px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display:flex; flex-direction:column;
-    z-index:100;
-  }
-  .logo {
-    padding:24px 20px;
-    font-size:20px; font-weight:700;
-    background: linear-gradient(135deg,#7c3aed,#a855f7,#06b6d4);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    border-bottom:1px solid var(--border);
-  }
-  .logo span { font-size:12px; display:block; color:var(--muted); -webkit-text-fill-color:var(--muted); font-weight:400; margin-top:2px; }
+/* PANELS */
+.panels{display:grid;grid-template-columns:260px 1fr 300px;height:calc(100vh - 56px)}
+.panel{overflow-y:auto;border-right:1px solid #30363d;padding:16px}
+.panel:last-child{border-right:none}
+.ptitle{font-size:.72rem;color:#8b949e;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;font-weight:600;padding-bottom:8px;border-bottom:1px solid #21262d}
 
-  nav { padding:16px 12px; flex:1; }
-  .nav-item {
-    display:flex; align-items:center; gap:10px;
-    padding:10px 12px; border-radius:10px;
-    cursor:pointer; margin-bottom:4px;
-    color:var(--muted); font-size:14px; font-weight:500;
-    transition:all .2s;
-  }
-  .nav-item:hover { background:var(--card); color:var(--text); }
-  .nav-item.active { background:rgba(124,58,237,.2); color:#a855f7; border:1px solid rgba(124,58,237,.3); }
-  .nav-icon { font-size:18px; }
+/* CALENDAR */
+.cal{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-head h3{font-size:.9rem;font-weight:600;color:#e6edf3}
+.cal-nav{background:#21262d;border:1px solid #30363d;color:#8b949e;cursor:pointer;font-size:.85rem;padding:4px 10px;border-radius:6px;transition:all .15s}
+.cal-nav:hover{border-color:#8b949e;color:#e6edf3}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.cal-dn{text-align:center;font-size:.65rem;color:#484f58;padding:4px 0;font-weight:600}
+.cal-d{text-align:center;padding:6px 2px;border-radius:4px;cursor:pointer;font-size:.82rem;color:#8b949e;transition:all .15s;position:relative}
+.cal-d:hover:not(.past):not(.empty){background:#21262d;color:#e6edf3}
+.cal-d.today{background:#238636;color:#fff;font-weight:700}
+.cal-d.sel{background:#21262d;color:#3fb950;font-weight:600;outline:1px solid #238636}
+.cal-d.has-ev::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:3px;height:3px;background:#3fb950;border-radius:50%}
+.cal-d.past{color:#30363d;cursor:default}
+.cal-d.empty{cursor:default}
+.cal-d.future{color:#e6edf3}
 
-  .sidebar-footer {
-    padding:16px; border-top:1px solid var(--border);
-    font-size:12px; color:var(--muted);
-  }
+/* VISITOR TIMELINE */
+.slot-row{border-radius:6px;padding:10px 12px;margin-bottom:4px;border:1px solid #30363d;transition:all .15s;cursor:pointer;background:#161b22}
+.slot-row.avail:hover{border-color:#238636;background:#0d1117}
+.slot-row.booked{background:#0d1117;border-color:#21262d;cursor:not-allowed;opacity:.5}
+.slot-row.pend{background:#0d1117;border-color:#9e6a03;cursor:not-allowed;opacity:.6}
+.slot-time{font-size:.82rem;font-weight:600;color:#e6edf3;margin-bottom:2px}
+.slot-lbl{font-size:.72rem}
+.avail .slot-lbl{color:#3fb950}
+.booked .slot-lbl{color:#484f58}
+.pend .slot-lbl{color:#d29922}
 
-  /* MAIN */
-  .main { margin-left:240px; min-height:100vh; }
+/* OWNER SLOT CARDS */
+.ocard{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px;margin-bottom:8px;border-left:3px solid #238636}
+.ocard.completed{border-left-color:#3fb950;opacity:.8}
+.ocard.cancelled{border-left-color:#da3633;opacity:.6}
+.ocard.rescheduled{border-left-color:#d29922}
+.ocard-title{font-weight:600;font-size:.9rem;margin-bottom:2px}
+.ocard-time{font-size:.75rem;color:#8b949e;margin-bottom:6px}
+.ocard-desc{font-size:.78rem;color:#8b949e;margin-bottom:8px;line-height:1.5}
+.cat-b{display:inline-block;padding:1px 8px;border-radius:20px;font-size:.68rem;font-weight:600;margin-bottom:6px;border:1px solid}
+.cat-b.Meeting{background:rgba(31,111,235,.15);color:#58a6ff;border-color:rgba(31,111,235,.3)}
+.cat-b.Brainstorming{background:rgba(188,140,255,.15);color:#bc8cff;border-color:rgba(188,140,255,.3)}
+.cat-b.Event{background:rgba(56,189,248,.15);color:#38bdf8;border-color:rgba(56,189,248,.3)}
+.cat-b.Learnings{background:rgba(63,185,80,.15);color:#3fb950;border-color:rgba(63,185,80,.3)}
+.cat-b.Others{background:rgba(139,148,158,.15);color:#8b949e;border-color:rgba(139,148,158,.3)}
+.pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:.68rem;font-weight:600;border:1px solid}
+.pill.upcoming{background:rgba(31,111,235,.1);color:#58a6ff;border-color:rgba(31,111,235,.2)}
+.pill.completed{background:rgba(63,185,80,.1);color:#3fb950;border-color:rgba(63,185,80,.2)}
+.pill.cancelled{background:rgba(218,54,51,.1);color:#f85149;border-color:rgba(218,54,51,.2)}
+.pill.rescheduled{background:rgba(210,153,34,.1);color:#d29922;border-color:rgba(210,153,34,.2)}
+.ocard-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 
-  .topbar {
-    position:sticky; top:0; z-index:50;
-    background:rgba(13,13,26,.8); backdrop-filter:blur(12px);
-    border-bottom:1px solid var(--border);
-    padding:16px 28px;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .page-title { font-size:20px; font-weight:600; }
-  .topbar-right { display:flex; gap:12px; align-items:center; }
+/* STATS */
+.stats{display:flex;gap:8px;margin-bottom:14px}
+.stat{flex:1;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px;text-align:center}
+.stat-n{font-size:1.4rem;font-weight:700}
+.stat-l{font-size:.68rem;color:#8b949e;margin-top:2px}
 
-  .btn {
-    padding:9px 18px; border-radius:10px; border:none;
-    font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
-    display:inline-flex; align-items:center; gap:6px;
-  }
-  .btn-primary { background:var(--accent1); color:#fff; }
-  .btn-primary:hover { background:#6d28d9; box-shadow:0 0 20px var(--glow); }
-  .btn-outline { background:transparent; color:var(--accent2); border:1px solid var(--accent1); }
-  .btn-outline:hover { background:rgba(124,58,237,.15); }
-  .btn-sm { padding:6px 12px; font-size:12px; border-radius:7px; }
-  .btn-danger { background:var(--danger); color:#fff; }
-  .btn-success { background:var(--accent4); color:#fff; }
-  .btn-warn { background:var(--warn); color:#000; }
+/* REQUEST CARDS */
+.rcard{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px;margin-bottom:10px}
+.rcard.conflict{border-color:#d29922}
+.conflict-w{background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);border-radius:4px;padding:6px 10px;font-size:.75rem;color:#d29922;margin-bottom:8px}
+.rcard-name{font-weight:600;font-size:.9rem}
+.rcard-meta{font-size:.78rem;color:#8b949e;margin-top:3px}
+.rcard-desc{font-size:.82rem;color:#e6edf3;margin:8px 0;line-height:1.5}
+.rcard-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.sbadge{display:inline-block;padding:1px 8px;border-radius:20px;font-size:.68rem;font-weight:600;border:1px solid}
+.sbadge.pending{background:rgba(210,153,34,.1);color:#d29922;border-color:rgba(210,153,34,.2)}
+.sbadge.accepted,.sbadge.accepted_with_remarks{background:rgba(63,185,80,.1);color:#3fb950;border-color:rgba(63,185,80,.2)}
+.sbadge.declined{background:rgba(218,54,51,.1);color:#f85149;border-color:rgba(218,54,51,.2)}
+.sbadge.reschedule_requested{background:rgba(31,111,235,.1);color:#58a6ff;border-color:rgba(31,111,235,.2)}
 
-  .content { padding:28px; }
+/* CHAT PANEL - PLACEHOLDER */
+.chat-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#484f58;text-align:center;padding:40px 20px}
+.chat-placeholder svg{margin-bottom:16px;opacity:.3}
+.chat-placeholder h3{font-size:1rem;margin-bottom:8px;color:#8b949e}
+.chat-placeholder p{font-size:.82rem;line-height:1.6}
 
-  /* STATS */
-  .stats-grid {
-    display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px;
-  }
-  .stat-card {
-    background:var(--card); border:1px solid var(--border);
-    border-radius:14px; padding:20px;
-    position:relative; overflow:hidden;
-  }
-  .stat-card::before {
-    content:''; position:absolute; top:-30px; right:-30px;
-    width:80px; height:80px; border-radius:50%;
-    opacity:.15;
-  }
-  .stat-card:nth-child(1)::before { background:#7c3aed; }
-  .stat-card:nth-child(2)::before { background:#06b6d4; }
-  .stat-card:nth-child(3)::before { background:#10b981; }
-  .stat-card:nth-child(4)::before { background:#f59e0b; }
-  .stat-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
-  .stat-value { font-size:32px; font-weight:700; margin:6px 0 2px; }
-  .stat-card:nth-child(1) .stat-value { color:#a855f7; }
-  .stat-card:nth-child(2) .stat-value { color:#06b6d4; }
-  .stat-card:nth-child(3) .stat-value { color:#10b981; }
-  .stat-card:nth-child(4) .stat-value { color:#f59e0b; }
-  .stat-sub { font-size:12px; color:var(--muted); }
+/* MODALS */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:center;justify-content:center;padding:16px}
+.ov.open{display:flex}
+.modal{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
+.modal h2{margin-bottom:18px;font-size:1.05rem;font-weight:700;color:#e6edf3}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:.78rem;color:#8b949e;margin-bottom:5px;font-weight:500}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:.875rem;outline:none;transition:border .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#238636}
+.fg select option{background:#161b22}
+.fg textarea{height:80px;resize:vertical;line-height:1.5}
+.char-cnt{font-size:.7rem;color:#484f58;margin-top:3px}
+.char-cnt.ok{color:#3fb950}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.form-err{color:#f85149;font-size:.78rem;margin-top:6px}
 
-  /* SECTIONS */
-  .section { margin-bottom:28px; }
-  .section-header {
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:16px;
-  }
-  .section-title { font-size:16px; font-weight:600; }
+/* PAST BOOKINGS */
+.past-section{margin-top:16px;padding-top:14px;border-top:1px solid #21262d}
+.past-section h3{font-size:.78rem;color:#8b949e;margin-bottom:8px;font-weight:600}
+.past-section input{width:100%;padding:7px 11px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:.82rem;outline:none;margin-bottom:6px}
+.past-item{background:#161b22;border-radius:6px;padding:9px 11px;margin-top:5px;font-size:.8rem;border-left:3px solid #238636}
+.ps-accepted,.ps-accepted_with_remarks{color:#3fb950;font-weight:600}
+.ps-pending{color:#d29922;font-weight:600}
+.ps-declined{color:#f85149;font-weight:600}
+.ps-reschedule_requested{color:#58a6ff;font-weight:600}
+.ps-cancelled{color:#f85149;font-weight:600}
 
-  /* CALENDAR */
-  .calendar-card {
-    background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden;
-  }
-  .cal-header {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:16px 20px; border-bottom:1px solid var(--border);
-  }
-  .cal-month { font-size:16px; font-weight:600; }
-  .cal-nav { background:none; border:1px solid var(--border); color:var(--text); padding:5px 10px; border-radius:7px; cursor:pointer; font-size:14px; }
-  .cal-nav:hover { background:var(--border); }
-  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
-  .cal-day-name {
-    text-align:center; padding:10px 4px; font-size:11px;
-    color:var(--muted); font-weight:600; text-transform:uppercase;
-    border-bottom:1px solid var(--border);
-  }
-  .cal-day {
-    aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-size:13px; cursor:pointer; border-radius:0;
-    position:relative; transition:all .15s; padding:4px; border:1px solid transparent;
-  }
-  .cal-day:hover { background:rgba(124,58,237,.15); }
-  .cal-day.today { background:rgba(124,58,237,.25); color:#a855f7; font-weight:700; }
-  .cal-day.selected { background:var(--accent1); color:#fff; border-radius:8px; }
-  .cal-day.other-month { color:var(--border); }
-  .cal-day.has-event::after {
-    content:''; position:absolute; bottom:4px;
-    width:5px; height:5px; border-radius:50%; background:#a855f7;
-  }
-  .cal-day.selected::after { background:#fff; }
+/* CANCEL HIST */
+.ch-btn{background:transparent;border:1px solid #30363d;color:#8b949e;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.78rem;margin-top:12px;transition:all .15s}
+.ch-btn:hover{border-color:#8b949e;color:#e6edf3}
+.ch-item{background:#161b22;border-left:3px solid #da3633;border-radius:6px;padding:9px 11px;margin-top:6px;font-size:.8rem}
 
-  /* SCHEDULE TABLE */
-  .table-card {
-    background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden;
-  }
-  table { width:100%; border-collapse:collapse; }
-  th {
-    padding:12px 16px; text-align:left; font-size:11px;
-    color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px;
-    border-bottom:1px solid var(--border); background:rgba(0,0,0,.2);
-  }
-  td { padding:13px 16px; font-size:13px; border-bottom:1px solid rgba(42,42,85,.5); }
-  tr:last-child td { border-bottom:none; }
-  tr:hover td { background:rgba(124,58,237,.06); }
+/* OWNER SUBBAR */
+.owner-bar{background:#161b22;border-bottom:1px solid #30363d;padding:8px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.tab-row{display:flex;gap:0;background:#0d1117;border:1px solid #30363d;border-radius:6px;overflow:hidden}
+.tab-btn{padding:6px 16px;border:none;cursor:pointer;font-size:.82rem;font-weight:500;color:#8b949e;background:transparent;transition:all .15s;border-right:1px solid #30363d}
+.tab-btn:last-child{border-right:none}
+.tab-btn.active{background:#21262d;color:#e6edf3}
+.tab-btn:hover:not(.active){color:#e6edf3}
 
-  /* BADGE */
-  .badge {
-    display:inline-flex; padding:3px 9px; border-radius:20px;
-    font-size:11px; font-weight:600; text-transform:capitalize;
-  }
-  .badge-upcoming { background:rgba(6,182,212,.15); color:#06b6d4; border:1px solid rgba(6,182,212,.3); }
-  .badge-completed { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); }
-  .badge-cancelled { background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
-  .badge-rescheduled { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
-  .badge-pending { background:rgba(168,85,247,.15); color:#a855f7; border:1px solid rgba(168,85,247,.3); }
-  .badge-accepted { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); }
-  .badge-declined { background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+.no-data{text-align:center;color:#484f58;padding:32px 16px;font-size:.85rem}
+.copy-ok{color:#3fb950;font-size:.75rem;margin-left:6px}
+.success-banner{background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);border-radius:6px;padding:12px;color:#3fb950;margin-bottom:10px;font-size:.85rem}
 
-  /* CATEGORY */
-  .cat-dot { display:inline-flex; gap:6px; align-items:center; }
-  .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-
-  /* MODAL */
-  .modal-bg {
-    position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
-    z-index:200; display:none; align-items:center; justify-content:center;
-  }
-  .modal-bg.open { display:flex; }
-  .modal {
-    background:var(--card); border:1px solid var(--border);
-    border-radius:18px; padding:28px; width:520px; max-height:90vh; overflow-y:auto;
-  }
-  .modal h2 { font-size:18px; font-weight:700; margin-bottom:20px; }
-  .form-group { margin-bottom:16px; }
-  label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
-  input, select, textarea {
-    width:100%; background:var(--surface); border:1px solid var(--border);
-    color:var(--text); border-radius:9px; padding:10px 13px; font-size:14px; font-family:'Inter',sans-serif;
-    outline:none; transition:border-color .2s;
-  }
-  input:focus, select:focus, textarea:focus { border-color:var(--accent1); }
-  textarea { resize:vertical; min-height:80px; }
-  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
-
-  /* BOOKING REQUESTS */
-  .request-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:12px;
-    padding:16px; margin-bottom:12px;
-  }
-  .request-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
-  .request-name { font-weight:600; font-size:14px; }
-  .request-email { font-size:12px; color:var(--muted); margin-top:2px; }
-  .request-time { font-size:13px; color:var(--accent3); margin:6px 0; }
-  .request-desc { font-size:13px; color:var(--muted); margin-bottom:12px; }
-  .request-actions { display:flex; gap:8px; flex-wrap:wrap; }
-
-  /* TOAST */
-  #toast {
-    position:fixed; bottom:24px; right:24px; z-index:999;
-    background:var(--card); border:1px solid var(--border);
-    border-radius:12px; padding:14px 20px; font-size:14px;
-    transform:translateY(100px); opacity:0; transition:all .3s;
-    max-width:320px;
-  }
-  #toast.show { transform:translateY(0); opacity:1; }
-  #toast.success { border-left:3px solid var(--accent4); }
-  #toast.error { border-left:3px solid var(--danger); }
-
-  /* TABS */
-  .tabs { display:flex; gap:4px; background:var(--surface); border-radius:10px; padding:4px; margin-bottom:20px; }
-  .tab {
-    flex:1; padding:8px; text-align:center; border-radius:7px;
-    cursor:pointer; font-size:13px; font-weight:500; color:var(--muted);
-    transition:all .2s;
-  }
-  .tab.active { background:var(--accent1); color:#fff; }
-
-  /* EMPTY */
-  .empty { text-align:center; padding:40px; color:var(--muted); }
-  .empty-icon { font-size:40px; margin-bottom:12px; }
-
-  /* LOADING */
-  .loader {
-    display:flex; gap:6px; justify-content:center; padding:30px;
-  }
-  .loader span {
-    width:8px; height:8px; border-radius:50%; background:var(--accent1);
-    animation:bounce .6s infinite alternate;
-  }
-  .loader span:nth-child(2) { animation-delay:.15s; background:var(--accent2); }
-  .loader span:nth-child(3) { animation-delay:.3s; background:var(--accent3); }
-  @keyframes bounce { to { transform:translateY(-10px); opacity:.5; } }
-
-  /* REMARKS MODAL */
-  #remarksInput { margin-top:10px; }
-
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width:5px; }
-  ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+@media(max-width:900px){
+  .panels{grid-template-columns:1fr;height:auto}
+  .panel{border-right:none;border-bottom:1px solid #30363d;min-height:250px}
+  .owner-bar{flex-direction:column;align-items:flex-start}
+}
 </style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="logo">✦ AuraScheduler<span>Owner Dashboard</span></div>
-  <nav>
-    <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">🏠</span> Dashboard</div>
-    <div class="nav-item" onclick="showPage('calendar')"><span class="nav-icon">📅</span> Calendar</div>
-    <div class="nav-item" onclick="showPage('schedules')"><span class="nav-icon">📋</span> My Schedules</div>
-    <div class="nav-item" onclick="showPage('requests')"><span class="nav-icon">📬</span> Booking Requests <span id="pending-badge" style="margin-left:auto;background:#7c3aed;color:#fff;font-size:10px;padding:1px 7px;border-radius:10px;display:none"></span></div>
-  </nav>
-  <div class="sidebar-footer">
-    🔗 <a href="booking.html" target="_blank" style="color:var(--accent2);text-decoration:none">Open Booking Page</a>
+<!-- TOPBAR -->
+<div class="topbar">
+  <span class="brand">My<span>Scheduler</span></span>
+  <div class="topbar-right" id="topbar-right">
+    <button class="btn btn-ghost" id="owner-btn" onclick="showLoginModal()">🔐 Owner Login</button>
   </div>
-</aside>
+</div>
 
-<!-- MAIN -->
-<main class="main">
-  <div class="topbar">
-    <div class="page-title" id="page-title">Dashboard</div>
-    <div class="topbar-right">
-      <button class="btn btn-primary" onclick="openAddModal()">＋ Add Schedule</button>
+<!-- ══════ VISITOR VIEW ══════ -->
+<div id="visitor-view">
+  <div class="panels">
+    <!-- Panel 1: Calendar -->
+    <div class="panel">
+      <div class="ptitle">Select a Date</div>
+      <div class="cal">
+        <div class="cal-head">
+          <button class="cal-nav" onclick="vCalMo(-1)">‹</button>
+          <h3 id="v-cal-lbl"></h3>
+          <button class="cal-nav" onclick="vCalMo(1)">›</button>
+        </div>
+        <div class="cal-grid" id="v-cal-grid"></div>
+      </div>
+      <div class="past-section">
+        <h3>View My Past Requests</h3>
+        <input type="email" id="past-email" placeholder="Enter your email"/>
+        <button class="btn btn-ghost btn-sm" style="width:100%" onclick="lookupPast()">Search</button>
+        <div id="past-results"></div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Availability -->
+    <div class="panel">
+      <div class="ptitle">Availability — <span id="v-day-lbl">Select a date</span></div>
+      <div id="v-timeline"><div class="no-data">Select a date to view available slots</div></div>
+    </div>
+
+    <!-- Panel 3: Chatbot Placeholder -->
+    <div class="panel">
+      <div class="ptitle">AI Assistant</div>
+      <div class="chat-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <h3>AI Chatbot</h3>
+        <p>AI assistant integration coming soon.<br/>Use the calendar and availability panel to book your meeting.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ OWNER VIEW ══════ -->
+<div id="owner-view" style="display:none">
+  <div class="owner-bar">
+    <div class="tab-row">
+      <button class="tab-btn active" id="otab-s" onclick="oTab('s')">📅 Schedule</button>
+      <button class="tab-btn" id="otab-r" onclick="oTab('r')">📬 Requests<span class="badge-n" id="req-badge">0</span></button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-ghost btn-sm" onclick="copyLink()">📋 Copy Booking Link<span class="copy-ok" id="copy-ok" style="display:none">Copied!</span></button>
+      <button class="btn btn-primary btn-sm" onclick="openAddSlot()">+ Add Slot</button>
+      <button class="btn btn-ghost btn-sm" onclick="ownerOut()">← Return to Booking Page</button>
     </div>
   </div>
 
-  <div class="content">
-
-    <!-- DASHBOARD PAGE -->
-    <div id="page-dashboard">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Total Schedules</div>
-          <div class="stat-value" id="stat-total">—</div>
-          <div class="stat-sub">All time</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Upcoming</div>
-          <div class="stat-value" id="stat-upcoming">—</div>
-          <div class="stat-sub">Next events</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Completed</div>
-          <div class="stat-value" id="stat-completed">—</div>
-          <div class="stat-sub">Done ✓</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Pending Requests</div>
-          <div class="stat-value" id="stat-pending">—</div>
-          <div class="stat-sub">Awaiting review</div>
+  <!-- Schedule Tab -->
+  <div id="o-sched">
+    <div class="panels">
+      <div class="panel">
+        <div class="ptitle">Calendar</div>
+        <div class="cal">
+          <div class="cal-head">
+            <button class="cal-nav" onclick="oCalMo(-1)">‹</button>
+            <h3 id="o-cal-lbl"></h3>
+            <button class="cal-nav" onclick="oCalMo(1)">›</button>
+          </div>
+          <div class="cal-grid" id="o-cal-grid"></div>
         </div>
       </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <div class="section">
-          <div class="section-header"><span class="section-title">📅 Today's Schedule</span></div>
-          <div id="today-list"><div class="loader"><span></span><span></span><span></span></div></div>
+      <div class="panel">
+        <div class="ptitle">Day Schedule — <span id="o-day-lbl">Select a date</span></div>
+        <div class="stats">
+          <div class="stat"><div class="stat-n" style="color:#3fb950" id="st-c">0</div><div class="stat-l">Completed</div></div>
+          <div class="stat"><div class="stat-n" style="color:#d29922" id="st-r">0</div><div class="stat-l">Rescheduled</div></div>
+          <div class="stat"><div class="stat-n" style="color:#f85149" id="st-x">0</div><div class="stat-l">Cancelled</div></div>
         </div>
-        <div class="section">
-          <div class="section-header"><span class="section-title">📬 Recent Requests</span></div>
-          <div id="recent-requests"><div class="loader"><span></span><span></span><span></span></div></div>
+        <div id="o-slots"><div class="no-data">Select a date</div></div>
+        <button class="ch-btn" onclick="toggleCH()">📋 Cancellation History</button>
+        <div id="ch-list" style="display:none"></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">AI Assistant</div>
+        <div class="chat-placeholder">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <h3>AI Assistant</h3>
+          <p>AI integration coming soon.<br/>Use the dashboard panels to manage your schedule.</p>
         </div>
       </div>
     </div>
-
-    <!-- CALENDAR PAGE -->
-    <div id="page-calendar" style="display:none">
-      <div class="calendar-card" style="margin-bottom:20px">
-        <div class="cal-header">
-          <button class="cal-nav" onclick="calPrev()">◀</button>
-          <span class="cal-month" id="cal-month-label"></span>
-          <button class="cal-nav" onclick="calNext()">▶</button>
-        </div>
-        <div class="cal-grid" id="cal-day-names"></div>
-        <div class="cal-grid" id="cal-days"></div>
-      </div>
-      <div class="section">
-        <div class="section-header">
-          <span class="section-title" id="cal-selected-label">Select a date to view schedules</span>
-          <button class="btn btn-primary btn-sm" onclick="openAddModal()">＋ Add</button>
-        </div>
-        <div id="cal-schedule-list"></div>
-      </div>
-    </div>
-
-    <!-- SCHEDULES PAGE -->
-    <div id="page-schedules" style="display:none">
-      <div class="section-header" style="margin-bottom:16px">
-        <div class="tabs" style="flex:1;margin-bottom:0;margin-right:16px">
-          <div class="tab active" onclick="filterSchedules('all',this)">All</div>
-          <div class="tab" onclick="filterSchedules('upcoming',this)">Upcoming</div>
-          <div class="tab" onclick="filterSchedules('completed',this)">Completed</div>
-          <div class="tab" onclick="filterSchedules('cancelled',this)">Cancelled</div>
-        </div>
-        <button class="btn btn-primary" onclick="openAddModal()">＋ Add Schedule</button>
-      </div>
-      <div class="table-card">
-        <table>
-          <thead><tr>
-            <th>Title</th><th>Date</th><th>Time</th><th>Category</th><th>Status</th><th>Actions</th>
-          </tr></thead>
-          <tbody id="schedules-tbody">
-            <tr><td colspan="6"><div class="loader"><span></span><span></span><span></span></div></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- REQUESTS PAGE -->
-    <div id="page-requests" style="display:none">
-      <div class="tabs" style="max-width:400px">
-        <div class="tab active" onclick="filterRequests('pending',this)">Pending</div>
-        <div class="tab" onclick="filterRequests('accepted',this)">Accepted</div>
-        <div class="tab" onclick="filterRequests('declined',this)">Declined</div>
-        <div class="tab" onclick="filterRequests('all',this)">All</div>
-      </div>
-      <div id="requests-list"><div class="loader"><span></span><span></span><span></span></div></div>
-    </div>
-
   </div>
-</main>
 
-<!-- ADD/EDIT SCHEDULE MODAL -->
-<div class="modal-bg" id="schedule-modal">
+  <!-- Requests Tab -->
+  <div id="o-reqs" style="display:none;padding:20px;max-width:860px;margin:0 auto">
+    <div style="display:flex;gap:4px;margin-bottom:14px">
+      <button class="btn btn-ghost btn-sm" id="rft-p" onclick="rFilter('pending')" style="border-color:#238636;color:#3fb950">⏳ Pending</button>
+      <button class="btn btn-ghost btn-sm" id="rft-a" onclick="rFilter('all')">📋 All Requests</button>
+    </div>
+    <div id="reqs-list"><div class="no-data">Loading...</div></div>
+  </div>
+</div>
+
+<!-- ══════ MODALS ══════ -->
+<!-- Login -->
+<div class="ov" id="login-modal">
+  <div class="modal" style="max-width:340px">
+    <h2>🔐 Owner Login</h2>
+    <div class="fg"><label>Password</label><input type="password" id="login-pw" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <div class="form-err" id="login-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('login-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- Booking Form -->
+<div class="ov" id="book-modal">
   <div class="modal">
-    <h2 id="modal-title">Add Schedule</h2>
-    <div class="form-group">
-      <label>Title *</label>
-      <input id="f-title" type="text" placeholder="Meeting with team..."/>
+    <h2>Request a Meeting</h2>
+    <div class="fg"><label>Your Name *</label><input type="text" id="b-name" placeholder="Full name"/></div>
+    <div class="fg"><label>Your Email *</label><input type="email" id="b-email" placeholder="email@example.com"/></div>
+    <div class="fg"><label>Date</label><input type="text" id="b-date" readonly style="color:#8b949e"/></div>
+    <div class="fg"><label>Start Time (IST)</label><input type="time" id="b-start"/></div>
+    <div class="fg"><label>End Time (IST) *</label><input type="time" id="b-end"/></div>
+    <div class="fg">
+      <label>Reason for Meeting * (min 25 characters)</label>
+      <textarea id="b-desc" placeholder="Describe the purpose..." oninput="cc('b-desc','b-cc')"></textarea>
+      <div class="char-cnt" id="b-cc">0 / 25 characters</div>
     </div>
-    <div class="form-group">
-      <label>Description</label>
-      <textarea id="f-desc" placeholder="Details..."></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Date *</label>
-        <input id="f-date" type="date"/>
-      </div>
-      <div class="form-group">
-        <label>Category *</label>
-        <select id="f-cat">
-          <option value="">Select...</option>
-          <option>Meeting</option>
-          <option>Brainstorming</option>
-          <option>Event Participation</option>
-          <option>Learnings</option>
-          <option>Others</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Start Time *</label>
-        <input id="f-start" type="time"/>
-      </div>
-      <div class="form-group">
-        <label>End Time *</label>
-        <input id="f-end" type="time"/>
-      </div>
-    </div>
-    <div class="form-group" id="f-status-group">
-      <label>Status</label>
-      <select id="f-status">
-        <option value="upcoming">Upcoming</option>
-        <option value="completed">Completed</option>
-        <option value="rescheduled">Rescheduled</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('schedule-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSchedule()">💾 Save</button>
+    <div class="form-err" id="b-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('book-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitBooking()">Submit Request</button>
     </div>
   </div>
 </div>
 
-<!-- REMARKS MODAL -->
-<div class="modal-bg" id="remarks-modal">
-  <div class="modal" style="width:420px">
-    <h2 id="remarks-modal-title">Add Remarks</h2>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Optional message to the visitor:</p>
-    <textarea id="remarks-text" placeholder="e.g. Please bring your portfolio..." rows="4"></textarea>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('remarks-modal')">Cancel</button>
-      <button class="btn btn-success" id="remarks-confirm-btn">✓ Confirm</button>
+<!-- Add/Edit Slot -->
+<div class="ov" id="slot-modal">
+  <div class="modal">
+    <h2 id="slot-h">Add to Schedule</h2>
+    <div class="fg"><label>Category</label>
+      <select id="f-cat"><option>Meeting</option><option>Brainstorming</option><option>Event Participation</option><option>Learnings</option><option>Others</option></select>
+    </div>
+    <div class="fg"><label>Title</label><input type="text" id="f-title" placeholder="Enter title"/></div>
+    <div class="fg"><label>Date</label><input type="date" id="f-date"/></div>
+    <div class="fg"><label>Start Time (min 5:00 AM)</label><input type="time" id="f-start"/></div>
+    <div class="fg"><label>End Time (max 11:00 PM)</label><input type="time" id="f-end"/></div>
+    <div class="fg">
+      <label>Description (min 25 characters)</label>
+      <textarea id="f-desc" oninput="cc('f-desc','f-cc')"></textarea>
+      <div class="char-cnt" id="f-cc">0 / 25 characters</div>
+    </div>
+    <div class="form-err" id="slot-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('slot-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitSlot()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- TOAST -->
-<div id="toast"></div>
+<!-- Reschedule -->
+<div class="ov" id="rs-modal">
+  <div class="modal">
+    <h2>Reschedule Slot</h2>
+    <div class="fg"><label>New Date</label><input type="date" id="rs-date"/></div>
+    <div class="fg"><label>New Start Time</label><input type="time" id="rs-start"/></div>
+    <div class="fg"><label>New End Time</label><input type="time" id="rs-end"/></div>
+    <div class="form-err" id="rs-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('rs-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmRS()">Reschedule</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remarks -->
+<div class="ov" id="rmk-modal">
+  <div class="modal">
+    <h2 id="rmk-h">Add Remarks</h2>
+    <div class="fg"><label id="rmk-lbl">Remarks</label><textarea id="rmk-in" placeholder="Optional..."></textarea></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('rmk-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmRmk()">Confirm</button>
+    </div>
+  </div>
+</div>
 
 <script>
-const SUPABASE_URL = 'https://jcnqistogwhpaocxxolt.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjbnFpc3RvZ3docGFvY3h4b2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NzM0NTIsImV4cCI6MjA5NzI0OTQ1Mn0.qqfxRf9EcnXdsAD8MTfjLZoIIpYOuOQuap3V0Q_HB5M';
+const SB_URL='https://jcnqistogwhpaocxxolt.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjbnFpc3RvZ3docGFvY3h4b2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NzM0NTIsImV4cCI6MjA5NzI0OTQ1Mn0.qqfxRf9EcnXdsAD8MTfjLZoIIpYOuOQuap3V0Q_HB5M';
+const PASS='Usharama@7505';
+const sb=supabase.createClient(SB_URL,SB_KEY);
 
-const H = {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+let vCalY,vCalM,vSel=null;
+let oCalY,oCalM,oSel=null;
+let oEvDates=new Set();
+let editId=null,rsId=null;
+let rmkAct=null,rmkId=null,rmkData=null;
+let allReqs=[],rMode='pending';
+let lastEmail='';
+let chVis=false;
 
-async function db(path, opts={}) {
-  const r = await fetch(SUPABASE_URL+'/rest/v1/'+path, {...opts, headers:{...H,...(opts.headers||{})}});
-  if (!r.ok) { const e=await r.json(); throw new Error(e.message||'DB Error'); }
-  return opts.method && opts.method!=='GET' ? (r.status===204?null:r.json()) : r.json();
+function ist(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}))}
+function fd(d){return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`}
+function p2(n){return String(n).padStart(2,'0')}
+function ft(t){if(!t)return '';const[h,m]=t.split(':');const hr=parseInt(h);return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'} IST`}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function cc(tid,cid){const n=document.getElementById(tid).value.length;const el=document.getElementById(cid);el.textContent=`${n} / 25 characters`;el.className=n>=25?'char-cnt ok':'char-cnt'}
+document.addEventListener('click',e=>{if(e.target.classList.contains('ov'))e.target.classList.remove('open')});
+
+window.onload=()=>{
+  const now=ist();
+  vCalY=oCalY=now.getFullYear();vCalM=oCalM=now.getMonth();
+  vSel=oSel=fd(now);
+  renderVCal();vSelDate(vSel);
+  if(sessionStorage.getItem('ms_auth'))showOwner();
+  // Realtime
+  sb.channel('rt')
+    .on('postgres_changes',{event:'*',schema:'public',table:'booking_requests'},()=>{
+      if(vSel)renderTimeline(vSel);
+      if(lastEmail)lookupPast(true);
+      if(sessionStorage.getItem('ms_auth')){loadReqs();loadReqCount();}
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'schedules'},()=>{
+      if(vSel)renderTimeline(vSel);
+      if(sessionStorage.getItem('ms_auth')){loadOSlots();loadStats();loadOEvDates();}
+    }).subscribe();
+};
+
+// ── AUTH ──────────────────────────────────────
+function showLoginModal(){
+  document.getElementById('login-pw').value='';
+  document.getElementById('login-err').textContent='';
+  openModal('login-modal');
+}
+function doLogin(){
+  if(document.getElementById('login-pw').value===PASS){
+    sessionStorage.setItem('ms_auth','1');
+    closeModal('login-modal');showOwner();
+  }else{
+    document.getElementById('login-err').textContent='Incorrect password. Try again.';
+  }
+}
+function showOwner(){
+  document.getElementById('visitor-view').style.display='none';
+  document.getElementById('owner-view').style.display='block';
+  document.getElementById('owner-btn').style.display='none';
+  const now=ist();oCalY=now.getFullYear();oCalM=now.getMonth();oSel=fd(now);
+  renderOCal();oSelDate(oSel);
+  Promise.all([loadOEvDates(),loadStats(),loadReqCount(),loadReqs()]);
+}
+function ownerOut(){
+  sessionStorage.removeItem('ms_auth');
+  document.getElementById('owner-view').style.display='none';
+  document.getElementById('visitor-view').style.display='block';
+  document.getElementById('owner-btn').style.display='inline-flex';
 }
 
-// ── STATE ──
-let allSchedules = [], allRequests = [], editingId = null;
-let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
-let calSelected = null, schedulesFilter = 'all', requestsFilter = 'pending';
-let currentPage = 'dashboard';
-
-// ── NAVIGATION ──
-function showPage(p) {
-  currentPage = p;
-  ['dashboard','calendar','schedules','requests'].forEach(x=>{
-    document.getElementById('page-'+x).style.display = x===p?'':'none';
-    document.querySelectorAll('.nav-item').forEach((n,i)=>{
-      n.classList.toggle('active', ['dashboard','calendar','schedules','requests'][i]===p);
-    });
+// ── VISITOR CALENDAR ──────────────────────────
+function renderVCal(){
+  const lbl=new Date(vCalY,vCalM,1).toLocaleString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('v-cal-lbl').textContent=lbl;
+  const grid=document.getElementById('v-cal-grid');grid.innerHTML='';
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>{
+    const e=document.createElement('div');e.className='cal-dn';e.textContent=d;grid.appendChild(e);
   });
-  document.getElementById('page-title').textContent = {dashboard:'Dashboard',calendar:'Calendar',schedules:'My Schedules',requests:'Booking Requests'}[p];
-  if(p==='dashboard') loadDashboard();
-  if(p==='calendar') { renderCalendar(); loadCalendarDay(calSelected); }
-  if(p==='schedules') renderSchedulesTable();
-  if(p==='requests') renderRequestsList();
-}
-
-// ── LOAD ALL DATA ──
-async function loadAll() {
-  try {
-    [allSchedules, allRequests] = await Promise.all([
-      db('schedules?select=*&order=date.asc,start_time.asc'),
-      db('booking_requests?select=*&order=created_at.desc')
-    ]);
-    updateStats();
-    loadDashboard();
-    updatePendingBadge();
-  } catch(e) { toast('Error loading data: '+e.message,'error'); }
-}
-
-function updateStats() {
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('stat-total').textContent = allSchedules.length;
-  document.getElementById('stat-upcoming').textContent = allSchedules.filter(s=>s.status==='upcoming').length;
-  document.getElementById('stat-completed').textContent = allSchedules.filter(s=>s.status==='completed').length;
-  document.getElementById('stat-pending').textContent = allRequests.filter(r=>r.status==='pending').length;
-}
-
-function updatePendingBadge() {
-  const n = allRequests.filter(r=>r.status==='pending').length;
-  const b = document.getElementById('pending-badge');
-  b.textContent = n; b.style.display = n>0?'inline':'none';
-}
-
-function loadDashboard() {
-  const today = new Date().toISOString().split('T')[0];
-  const todayList = allSchedules.filter(s=>s.date===today);
-  const el = document.getElementById('today-list');
-  if(todayList.length===0) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">🗓️</div>No schedules today</div>`;
-  } else {
-    el.innerHTML = todayList.map(s=>`
-      <div class="request-card">
-        <div class="request-header">
-          <div><div class="request-name">${s.title}</div><div class="request-email">${s.category}</div></div>
-          <span class="badge badge-${s.status}">${s.status}</span>
-        </div>
-        <div class="request-time">🕐 ${fmt(s.start_time)} – ${fmt(s.end_time)}</div>
-        ${s.description?`<div class="request-desc">${s.description}</div>`:''}
-      </div>`).join('');
-  }
-
-  const recentReqs = allRequests.slice(0,3);
-  const rel = document.getElementById('recent-requests');
-  if(recentReqs.length===0) {
-    rel.innerHTML = `<div class="empty"><div class="empty-icon">📬</div>No requests yet</div>`;
-  } else {
-    rel.innerHTML = recentReqs.map(r=>`
-      <div class="request-card">
-        <div class="request-header">
-          <div><div class="request-name">${r.visitor_name}</div><div class="request-email">${r.visitor_email}</div></div>
-          <span class="badge badge-${r.status}">${r.status}</span>
-        </div>
-        <div class="request-time">📅 ${r.requested_date} · ${fmt(r.start_time)}–${fmt(r.end_time)}</div>
-        <div class="request-desc">${r.description}</div>
-      </div>`).join('');
+  const first=new Date(vCalY,vCalM,1).getDay(),total=new Date(vCalY,vCalM+1,0).getDate(),today=fd(ist());
+  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-d empty';grid.appendChild(e);}
+  for(let d=1;d<=total;d++){
+    const ds=`${vCalY}-${p2(vCalM+1)}-${p2(d)}`;
+    const el=document.createElement('div');el.className='cal-d';el.textContent=d;
+    if(ds<today){el.classList.add('past');}
+    else{
+      el.classList.add('future');
+      el.onclick=()=>vSelDate(ds);
+      if(ds===today)el.classList.add('today');
+      if(ds===vSel)el.classList.add('sel');
+    }
+    grid.appendChild(el);
   }
 }
-
-// ── CALENDAR ──
-function renderCalendar() {
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('cal-month-label').textContent = months[calMonth]+' '+calYear;
-  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  document.getElementById('cal-day-names').innerHTML = dayNames.map(d=>`<div class="cal-day-name">${d}</div>`).join('');
-
-  const first = new Date(calYear,calMonth,1).getDay();
-  const days = new Date(calYear,calMonth+1,0).getDate();
-  const prevDays = new Date(calYear,calMonth,0).getDate();
-  const today = new Date().toISOString().split('T')[0];
-
-  // Dates that have events
-  const eventDates = new Set(allSchedules.map(s=>s.date));
-
-  let html='';
-  for(let i=0;i<first;i++) {
-    const d = prevDays-first+i+1;
-    html+=`<div class="cal-day other-month">${d}</div>`;
-  }
-  for(let d=1;d<=days;d++) {
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const classes = ['cal-day', today===dateStr?'today':'', calSelected===dateStr?'selected':'', eventDates.has(dateStr)?'has-event':''].filter(Boolean).join(' ');
-    html+=`<div class="${classes}" onclick="selectCalDay('${dateStr}')">${d}</div>`;
-  }
-  const remaining = 42-first-days;
-  for(let d=1;d<=remaining;d++) html+=`<div class="cal-day other-month">${d}</div>`;
-  document.getElementById('cal-days').innerHTML=html;
+function vCalMo(d){vCalM+=d;if(vCalM<0){vCalM=11;vCalY--;}if(vCalM>11){vCalM=0;vCalY++;}renderVCal();}
+function vSelDate(ds){
+  vSel=ds;renderVCal();
+  const[y,m,d]=ds.split('-');
+  document.getElementById('v-day-lbl').textContent=new Date(y,m-1,d).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
+  renderTimeline(ds);
 }
 
-function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
-function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
-
-function selectCalDay(d) {
-  calSelected=d; renderCalendar(); loadCalendarDay(d);
-}
-
-function loadCalendarDay(d) {
-  if(!d) { document.getElementById('cal-schedule-list').innerHTML=''; return; }
-  document.getElementById('cal-selected-label').textContent = '📅 '+d;
-  const items = allSchedules.filter(s=>s.date===d);
-  const el = document.getElementById('cal-schedule-list');
-  if(items.length===0) {
-    el.innerHTML=`<div class="empty"><div class="empty-icon">🗓️</div>No schedules on this date</div>`;
-  } else {
-    el.innerHTML=`<div class="table-card"><table>
-      <thead><tr><th>Time</th><th>Title</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody>${items.map(s=>`<tr>
-        <td style="color:var(--accent3)">${fmt(s.start_time)}–${fmt(s.end_time)}</td>
-        <td>${s.title}</td>
-        <td><span class="cat-dot"><span class="dot" style="background:${catColor(s.category)}"></span>${s.category}</span></td>
-        <td><span class="badge badge-${s.status}">${s.status}</span></td>
-        <td><button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(s)})'>Edit</button></td>
-      </tr>`).join('')}</tbody>
-    </table></div>`;
+// ── VISITOR TIMELINE ──────────────────────────
+async function renderTimeline(date){
+  const el=document.getElementById('v-timeline');
+  el.innerHTML='<div class="no-data">Loading...</div>';
+  const{data:booked}=await sb.from('schedules').select('start_time,end_time').eq('date',date).neq('status','cancelled');
+  const{data:pend}=await sb.from('booking_requests').select('start_time,end_time').eq('requested_date',date).eq('status','pending');
+  const slots=[];
+  for(let h=5;h<23;h++){
+    for(let m=0;m<60;m+=30){
+      const s=`${p2(h)}:${p2(m)}`;
+      const eh=m===30?h+1:h,em=m===30?0:30;
+      const e=`${p2(eh)}:${p2(em)}`;
+      const isB=(booked||[]).some(b=>b.start_time.slice(0,5)<e&&b.end_time.slice(0,5)>s);
+      const isP=!isB&&(pend||[]).some(p=>p.start_time.slice(0,5)<e&&p.end_time.slice(0,5)>s);
+      slots.push({s,e,isB,isP});
+    }
   }
-}
-
-// ── SCHEDULES TABLE ──
-function renderSchedulesTable() {
-  const list = schedulesFilter==='all'?allSchedules:allSchedules.filter(s=>s.status===schedulesFilter);
-  const tbody = document.getElementById('schedules-tbody');
-  if(list.length===0) {
-    tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="empty-icon">📋</div>No schedules found</div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML=list.map(s=>`<tr>
-    <td><b>${s.title}</b>${s.description?`<br><span style="font-size:11px;color:var(--muted)">${s.description.substring(0,60)}...</span>`:''}</td>
-    <td>${s.date}</td>
-    <td style="color:var(--accent3)">${fmt(s.start_time)}–${fmt(s.end_time)}</td>
-    <td><span class="cat-dot"><span class="dot" style="background:${catColor(s.category)}"></span>${s.category}</span></td>
-    <td><span class="badge badge-${s.status}">${s.status}</span></td>
-    <td style="display:flex;gap:6px">
-      <button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(s)})'>✏️</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">🗑️</button>
-    </td>
-  </tr>`).join('');
-}
-
-function filterSchedules(f,el) {
-  schedulesFilter=f;
-  document.querySelectorAll('#page-schedules .tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  renderSchedulesTable();
-}
-
-// ── REQUESTS ──
-function renderRequestsList() {
-  const list = requestsFilter==='all'?allRequests:allRequests.filter(r=>r.status===requestsFilter||
-    (requestsFilter==='accepted'&&(r.status==='accepted'||r.status==='accepted_with_remarks')));
-  const el = document.getElementById('requests-list');
-  if(list.length===0) {
-    el.innerHTML=`<div class="empty"><div class="empty-icon">📬</div>No requests in this category</div>`; return;
-  }
-  el.innerHTML=list.map(r=>`
-    <div class="request-card">
-      <div class="request-header">
-        <div>
-          <div class="request-name">👤 ${r.visitor_name}</div>
-          <div class="request-email">✉️ ${r.visitor_email}</div>
-        </div>
-        <span class="badge badge-${r.status==='accepted_with_remarks'?'accepted':r.status}">${r.status.replace('_',' ')}</span>
-      </div>
-      <div class="request-time">📅 ${r.requested_date} · 🕐 ${fmt(r.start_time)} – ${fmt(r.end_time)}</div>
-      <div class="request-desc">${r.description}</div>
-      ${r.owner_remarks?`<div style="font-size:12px;color:var(--accent4);margin-bottom:8px">📝 Remarks: ${r.owner_remarks}</div>`:''}
-      ${r.status==='pending'?`
-      <div class="request-actions">
-        <button class="btn btn-success btn-sm" onclick="respondRequest('${r.id}','accepted')">✓ Accept</button>
-        <button class="btn btn-warn btn-sm" onclick="openRemarks('${r.id}','accepted_with_remarks')">📝 Accept w/ Remarks</button>
-        <button class="btn btn-outline btn-sm" onclick="respondRequest('${r.id}','reschedule_requested')">🔄 Request Reschedule</button>
-        <button class="btn btn-danger btn-sm" onclick="respondRequest('${r.id}','declined')">✗ Decline</button>
-      </div>`:''}
+  if(slots.every(x=>x.isB||x.isP)){el.innerHTML='<div class="no-data">No available slots on this date</div>';return;}
+  el.innerHTML=slots.map(sl=>`
+    <div class="slot-row ${sl.isB?'booked':sl.isP?'pend':'avail'}"
+      ${!sl.isB&&!sl.isP?`onclick="openBook('${sl.s}','${sl.e}')"`:''}> 
+      <div class="slot-time">${ft(sl.s)} – ${ft(sl.e)}</div>
+      <div class="slot-lbl">${sl.isB?'🔒 Booked':sl.isP?'⏳ Pending':'✓ Available'}</div>
     </div>`).join('');
 }
 
-function filterRequests(f,el) {
-  requestsFilter=f;
-  document.querySelectorAll('#page-requests .tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  renderRequestsList();
+// ── BOOKING FORM ──────────────────────────────
+function openBook(s,e){
+  document.getElementById('b-date').value=vSel;
+  document.getElementById('b-start').value=s;
+  document.getElementById('b-end').value=e;
+  ['b-name','b-email','b-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('b-err').textContent='';
+  document.getElementById('b-cc').textContent='0 / 25 characters';
+  document.getElementById('b-cc').className='char-cnt';
+  openModal('book-modal');
+}
+async function submitBooking(){
+  const name=document.getElementById('b-name').value.trim();
+  const email=document.getElementById('b-email').value.trim();
+  const date=document.getElementById('b-date').value;
+  const start=document.getElementById('b-start').value;
+  const end=document.getElementById('b-end').value;
+  const desc=document.getElementById('b-desc').value.trim();
+  const err=document.getElementById('b-err');err.textContent='';
+  if(!name||!email||!start||!end||!desc){err.textContent='All fields required';return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='Invalid email format';return;}
+  if(end<=start){err.textContent='End time must be after start time';return;}
+  if(desc.length<25){err.textContent='Description needs at least 25 characters';return;}
+  const{data:ov}=await sb.from('schedules').select('id').eq('date',date).neq('status','cancelled').lt('start_time',end).gt('end_time',start);
+  if(ov&&ov.length){err.textContent='This time is no longer available. Please choose another slot.';return;}
+  const{error}=await sb.from('booking_requests').insert([{visitor_name:name,visitor_email:email,requested_date:date,start_time:start,end_time:end,description:desc,status:'pending'}]);
+  if(error){err.textContent='Submission failed. Please try again.';return;}
+  closeModal('book-modal');renderTimeline(date);
+  const tl=document.getElementById('v-timeline');
+  const b=document.createElement('div');b.className='success-banner';
+  b.innerHTML='✓ Request submitted! You will be notified once the owner reviews it.';
+  tl.prepend(b);setTimeout(()=>b.remove(),5000);
 }
 
-async function respondRequest(id, status, remarks='') {
-  try {
-    await db(`booking_requests?id=eq.${id}`, {
-      method:'PATCH',
-      headers:{'Prefer':'return=minimal'},
-      body: JSON.stringify({status, owner_remarks:remarks, updated_at:new Date().toISOString()})
-    });
-    const i = allRequests.findIndex(r=>r.id===id);
-    if(i>-1){allRequests[i].status=status;allRequests[i].owner_remarks=remarks;}
-    updateStats(); updatePendingBadge(); renderRequestsList();
-    toast('Request '+status.replace('_',' ')+'!','success');
-  } catch(e){toast(e.message,'error');}
+// ── PAST BOOKINGS ──────────────────────────────
+async function lookupPast(auto=false){
+  const email=auto?lastEmail:document.getElementById('past-email').value.trim();
+  if(!email)return;lastEmail=email;
+  const el=document.getElementById('past-results');
+  const{data}=await sb.from('booking_requests').select('*').eq('visitor_email',email).order('created_at',{ascending:false});
+  if(!data||!data.length){el.innerHTML='<p style="color:#484f58;font-size:.8rem;margin-top:6px">No requests found for this email.</p>';return;}
+  el.innerHTML=data.map(r=>`
+    <div class="past-item">
+      <strong>${r.requested_date}</strong> · ${ft(r.start_time)} – ${ft(r.end_time)}<br>
+      Status: <span class="ps-${r.status}">${r.status.replace(/_/g,' ')}</span>
+      ${r.owner_remarks?`<br><span style="color:#8b949e;font-size:.78rem">${r.owner_remarks}</span>`:''}
+    </div>`).join('');
 }
 
-let remarksCb=null;
-function openRemarks(id, status) {
-  document.getElementById('remarks-modal-title').textContent = 'Accept with Remarks';
-  document.getElementById('remarks-text').value='';
-  remarksCb = ()=>{ respondRequest(id,status,document.getElementById('remarks-text').value); closeModal('remarks-modal'); };
-  document.getElementById('remarks-confirm-btn').onclick = remarksCb;
-  openModal('remarks-modal');
+// ── OWNER CALENDAR ──────────────────────────────
+async function loadOEvDates(){
+  const{data}=await sb.from('schedules').select('date').neq('status','cancelled');
+  oEvDates=new Set(data?.map(r=>r.date)||[]);renderOCal();
+}
+function renderOCal(){
+  const lbl=new Date(oCalY,oCalM,1).toLocaleString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('o-cal-lbl').textContent=lbl;
+  const grid=document.getElementById('o-cal-grid');grid.innerHTML='';
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>{const e=document.createElement('div');e.className='cal-dn';e.textContent=d;grid.appendChild(e);});
+  const first=new Date(oCalY,oCalM,1).getDay(),total=new Date(oCalY,oCalM+1,0).getDate(),today=fd(ist());
+  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-d empty';grid.appendChild(e);}
+  for(let d=1;d<=total;d++){
+    const ds=`${oCalY}-${p2(oCalM+1)}-${p2(d)}`;
+    const el=document.createElement('div');el.className='cal-d future';el.textContent=d;
+    if(ds===today)el.classList.add('today');
+    if(ds===oSel)el.classList.add('sel');
+    if(oEvDates.has(ds))el.classList.add('has-ev');
+    el.onclick=()=>oSelDate(ds);
+    grid.appendChild(el);
+  }
+}
+function oCalMo(d){oCalM+=d;if(oCalM<0){oCalM=11;oCalY--;}if(oCalM>11){oCalM=0;oCalY++;}renderOCal();}
+function oSelDate(ds){
+  oSel=ds;renderOCal();
+  const[y,m,d]=ds.split('-');
+  document.getElementById('o-day-lbl').textContent=new Date(y,m-1,d).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  loadOSlots();
 }
 
-// ── SCHEDULE CRUD ──
-function openAddModal() {
-  editingId=null;
-  document.getElementById('modal-title').textContent='Add Schedule';
-  document.getElementById('f-title').value='';
-  document.getElementById('f-desc').value='';
-  document.getElementById('f-date').value=calSelected||new Date().toISOString().split('T')[0];
-  document.getElementById('f-cat').value='';
-  document.getElementById('f-start').value='09:00';
-  document.getElementById('f-end').value='10:00';
-  document.getElementById('f-status').value='upcoming';
-  document.getElementById('f-status-group').style.display='none';
-  openModal('schedule-modal');
+// ── OWNER SLOTS ──────────────────────────────
+async function loadOSlots(){
+  if(!oSel)return;
+  const{data}=await sb.from('schedules').select('*').eq('date',oSel).order('start_time');
+  const el=document.getElementById('o-slots');
+  if(!data||!data.length){el.innerHTML='<div class="no-data">No slots for this date</div>';return;}
+  const cm={'Event Participation':'Event'};
+  el.innerHTML=data.map(s=>`
+    <div class="ocard ${s.status}">
+      <span class="cat-b ${cm[s.category]||s.category}">${s.category}</span>
+      <div class="ocard-title">${s.title}</div>
+      <div class="ocard-time">${ft(s.start_time)} – ${ft(s.end_time)}</div>
+      <div class="ocard-desc">${s.description||''}</div>
+      <div style="font-size:.72rem;color:#484f58">
+        <span class="pill ${s.status}">${s.status}</span>
+        ${s.visitor_name?' · '+s.visitor_name:''}
+      </div>
+      <div class="ocard-actions">
+        ${s.status!=='completed'&&s.status!=='cancelled'?`
+          <button class="btn btn-success btn-sm" onclick="doComplete('${s.id}')">✓ Done</button>
+          <button class="btn btn-ghost btn-sm" onclick="doEdit(${JSON.stringify(s).replace(/"/g,'&quot;')})">Edit</button>
+          <button class="btn btn-warning btn-sm" onclick="doRS('${s.id}')">Reschedule</button>
+          <button class="btn btn-danger btn-sm" onclick="doCX('${s.id}')">Cancel</button>
+        `:`<span style="color:#484f58;font-size:.75rem">${s.status==='completed'?'✓ Completed':'✕ Cancelled'}</span>`}
+      </div>
+    </div>`).join('');
 }
-
-function openEditModal(s) {
-  editingId=s.id;
-  document.getElementById('modal-title').textContent='Edit Schedule';
-  document.getElementById('f-title').value=s.title;
-  document.getElementById('f-desc').value=s.description||'';
+async function loadStats(){
+  const{data}=await sb.from('schedules').select('status');
+  document.getElementById('st-c').textContent=data?.filter(r=>r.status==='completed').length||0;
+  document.getElementById('st-r').textContent=data?.filter(r=>r.status==='rescheduled').length||0;
+  document.getElementById('st-x').textContent=data?.filter(r=>r.status==='cancelled').length||0;
+}
+async function doComplete(id){await sb.from('schedules').update({status:'completed',updated_at:new Date().toISOString()}).eq('id',id);loadOSlots();loadStats();}
+async function doCX(id){if(!confirm('Cancel this slot?'))return;await sb.from('schedules').update({status:'cancelled',updated_at:new Date().toISOString()}).eq('id',id);loadOSlots();loadStats();loadOEvDates();}
+function doRS(id){rsId=id;document.getElementById('rs-date').value=oSel||'';document.getElementById('rs-err').textContent='';openModal('rs-modal');}
+async function confirmRS(){
+  const date=document.getElementById('rs-date').value,start=document.getElementById('rs-start').value,end=document.getElementById('rs-end').value;
+  if(!date||!start||!end){document.getElementById('rs-err').textContent='All fields required';return;}
+  if(end<=start){document.getElementById('rs-err').textContent='End must be after start';return;}
+  if(await hasOv(date,start,end,rsId)){document.getElementById('rs-err').textContent='Overlaps existing slot!';return;}
+  await sb.from('schedules').update({date,start_time:start,end_time:end,status:'rescheduled',updated_at:new Date().toISOString()}).eq('id',rsId);
+  closeModal('rs-modal');loadOSlots();loadStats();loadOEvDates();
+}
+function doEdit(s){
+  editId=s.id;document.getElementById('slot-h').textContent='Edit Slot';
+  document.getElementById('f-cat').value=s.category;document.getElementById('f-title').value=s.title;
   document.getElementById('f-date').value=s.date;
-  document.getElementById('f-cat').value=s.category;
-  document.getElementById('f-start').value=s.start_time.substring(0,5);
-  document.getElementById('f-end').value=s.end_time.substring(0,5);
-  document.getElementById('f-status').value=s.status;
-  document.getElementById('f-status-group').style.display='';
-  openModal('schedule-modal');
+  document.getElementById('f-start').value=(s.start_time||'').slice(0,5);
+  document.getElementById('f-end').value=(s.end_time||'').slice(0,5);
+  document.getElementById('f-desc').value=s.description||'';
+  document.getElementById('slot-err').textContent='';cc('f-desc','f-cc');openModal('slot-modal');
+}
+function openAddSlot(){
+  editId=null;document.getElementById('slot-h').textContent='Add to Schedule';
+  ['f-title','f-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-date').value=oSel||fd(ist());
+  document.getElementById('f-start').value='';document.getElementById('f-end').value='';
+  document.getElementById('slot-err').textContent='';
+  document.getElementById('f-cc').textContent='0 / 25 characters';document.getElementById('f-cc').className='char-cnt';
+  openModal('slot-modal');
+}
+async function submitSlot(){
+  const cat=document.getElementById('f-cat').value,title=document.getElementById('f-title').value.trim();
+  const date=document.getElementById('f-date').value,start=document.getElementById('f-start').value,end=document.getElementById('f-end').value;
+  const desc=document.getElementById('f-desc').value.trim(),err=document.getElementById('slot-err');
+  if(!title||!date||!start||!end||!desc){err.textContent='All fields required';return;}
+  if(end<=start){err.textContent='End must be after start';return;}
+  if(start<'05:00'){err.textContent='Start must be 5:00 AM or later';return;}
+  if(end>'23:00'){err.textContent='End must be 11:00 PM or earlier';return;}
+  if(desc.length<25){err.textContent='Description needs 25+ characters';return;}
+  if(await hasOv(date,start,end,editId)){err.textContent='Overlaps existing slot!';return;}
+  if(editId){await sb.from('schedules').update({category:cat,title,date,start_time:start,end_time:end,description:desc,updated_at:new Date().toISOString()}).eq('id',editId);}
+  else{await sb.from('schedules').insert([{category:cat,title,date,start_time:start,end_time:end,description:desc,status:'upcoming',created_by:'owner'}]);}
+  closeModal('slot-modal');loadOSlots();loadOEvDates();loadStats();
+}
+async function hasOv(date,start,end,exId=null){
+  let q=sb.from('schedules').select('id').eq('date',date).neq('status','cancelled').lt('start_time',end).gt('end_time',start);
+  if(exId)q=q.neq('id',exId);const{data}=await q;return data&&data.length>0;
 }
 
-async function saveSchedule() {
-  const title=document.getElementById('f-title').value.trim();
-  const date=document.getElementById('f-date').value;
-  const cat=document.getElementById('f-cat').value;
-  const start=document.getElementById('f-start').value;
-  const end=document.getElementById('f-end').value;
-  if(!title||!date||!cat||!start||!end){toast('Please fill all required fields','error');return;}
-
-  const payload={
-    title, date, category:cat,
-    start_time:start, end_time:end,
-    description:document.getElementById('f-desc').value.trim(),
-    updated_at:new Date().toISOString()
-  };
-  if(!editingId) payload.status='upcoming';
-  else payload.status=document.getElementById('f-status').value;
-
-  try {
-    if(editingId) {
-      await db(`schedules?id=eq.${editingId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
-      const i=allSchedules.findIndex(s=>s.id===editingId);
-      if(i>-1) allSchedules[i]={...allSchedules[i],...payload};
-      toast('Schedule updated!','success');
-    } else {
-      const res=await db('schedules',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
-      allSchedules.push(Array.isArray(res)?res[0]:res);
-      toast('Schedule added!','success');
-    }
-    closeModal('schedule-modal');
-    updateStats();
-    if(currentPage==='schedules') renderSchedulesTable();
-    if(currentPage==='calendar'){renderCalendar();loadCalendarDay(calSelected);}
-    if(currentPage==='dashboard') loadDashboard();
-  } catch(e){toast(e.message,'error');}
+// ── CANCEL HISTORY ──────────────────────────────
+async function toggleCH(){
+  chVis=!chVis;const el=document.getElementById('ch-list');el.style.display=chVis?'block':'none';
+  if(!chVis)return;
+  const{data}=await sb.from('schedules').select('*').eq('status','cancelled').order('updated_at',{ascending:false});
+  el.innerHTML=data?.length?data.map(s=>`<div class="ch-item"><strong>${s.title}</strong><br><span style="color:#484f58;font-size:.75rem">${s.date} · ${ft(s.start_time)} – ${ft(s.end_time)}</span></div>`).join(''):'<p style="color:#484f58;margin-top:8px">No cancelled slots</p>';
 }
 
-async function deleteSchedule(id) {
-  if(!confirm('Delete this schedule?')) return;
-  try {
-    await db(`schedules?id=eq.${id}`,{method:'DELETE'});
-    allSchedules=allSchedules.filter(s=>s.id!==id);
-    updateStats(); renderSchedulesTable();
-    toast('Schedule deleted','success');
-  } catch(e){toast(e.message,'error');}
+// ── REQUESTS ──────────────────────────────────
+async function loadReqCount(){
+  const{count}=await sb.from('booking_requests').select('*',{count:'exact',head:true}).eq('status','pending');
+  document.getElementById('req-badge').textContent=count||0;
+}
+async function loadReqs(){
+  const{data}=await sb.from('booking_requests').select('*').order('created_at',{ascending:false});
+  allReqs=data||[];renderReqs();
+}
+function rFilter(f){
+  rMode=f;
+  document.getElementById('rft-p').style.borderColor=f==='pending'?'#238636':'#30363d';
+  document.getElementById('rft-p').style.color=f==='pending'?'#3fb950':'#8b949e';
+  document.getElementById('rft-a').style.borderColor=f==='all'?'#238636':'#30363d';
+  document.getElementById('rft-a').style.color=f==='all'?'#3fb950':'#8b949e';
+  renderReqs();
+}
+function renderReqs(){
+  const el=document.getElementById('reqs-list');
+  const list=rMode==='pending'?allReqs.filter(r=>r.status==='pending'):allReqs;
+  if(!list.length){el.innerHTML='<div class="no-data">No requests</div>';return;}
+  const pend=allReqs.filter(r=>r.status==='pending');
+  el.innerHTML=list.map(r=>{
+    const ip=r.status==='pending';
+    const conf=ip&&pend.some(p=>p.id!==r.id&&p.requested_date===r.requested_date&&p.start_time<r.end_time&&p.end_time>r.start_time);
+    return `<div class="rcard ${conf?'conflict':''}">
+      ${conf?'<div class="conflict-w">⚠ Another request overlaps this time slot</div>':''}
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="rcard-name">${r.visitor_name}</span>
+        <span class="sbadge ${r.status}">${r.status.replace(/_/g,' ')}</span>
+      </div>
+      <div class="rcard-meta">📧 ${r.visitor_email}</div>
+      <div class="rcard-meta">📅 ${r.requested_date} · ${ft(r.start_time)} – ${ft(r.end_time)}</div>
+      <div class="rcard-desc">${r.description}</div>
+      ${r.owner_remarks?`<div style="font-size:.78rem;color:#8b949e;font-style:italic">Note: ${r.owner_remarks}</div>`:''}
+      ${ip?`<div class="rcard-actions">
+        <button class="btn btn-success btn-sm" onclick="reqAct('${r.id}','accept')">✓ Accept</button>
+        <button class="btn btn-ghost btn-sm" onclick="reqAct('${r.id}','accept_remarks')">Accept + Note</button>
+        <button class="btn btn-warning btn-sm" onclick="reqAct('${r.id}','reschedule')">Reschedule</button>
+        <button class="btn btn-danger btn-sm" onclick="reqAct('${r.id}','decline')">✕ Decline</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+async function reqAct(id,action){
+  const req=allReqs.find(r=>r.id===id);if(!req)return;
+  if(action==='accept'){if(!confirm('Accept this booking?'))return;await acceptReq(id,req,null);}
+  else{
+    rmkAct=action;rmkId=id;rmkData=req;
+    const t={accept_remarks:'Accept with Note',reschedule:'Request Reschedule',decline:'Decline'};
+    const l={accept_remarks:'Add a note for the visitor:',reschedule:'Suggest a new time:',decline:'Reason (optional):'};
+    document.getElementById('rmk-h').textContent=t[action];
+    document.getElementById('rmk-lbl').textContent=l[action];
+    document.getElementById('rmk-in').value='';openModal('rmk-modal');
+  }
+}
+async function confirmRmk(){
+  const remarks=document.getElementById('rmk-in').value.trim();closeModal('rmk-modal');
+  if(rmkAct==='accept_remarks')await acceptReq(rmkId,rmkData,remarks);
+  else if(rmkAct==='reschedule'){await sb.from('booking_requests').update({status:'reschedule_requested',owner_remarks:remarks,updated_at:new Date().toISOString()}).eq('id',rmkId);}
+  else if(rmkAct==='decline'){await sb.from('booking_requests').update({status:'declined',owner_remarks:remarks||null,updated_at:new Date().toISOString()}).eq('id',rmkId);}
+  loadReqCount();loadReqs();loadOSlots();loadOEvDates();
+}
+async function acceptReq(id,req,remarks){
+  const ov=await hasOv(req.requested_date,(req.start_time||'').slice(0,5),(req.end_time||'').slice(0,5));
+  if(ov){alert('This time slot is already booked! Cannot accept.');return;}
+  await sb.from('schedules').insert([{category:'Meeting',title:`Meeting with ${req.visitor_name}`,date:req.requested_date,start_time:req.start_time,end_time:req.end_time,description:req.description,status:'upcoming',created_by:'visitor',visitor_name:req.visitor_name,visitor_email:req.visitor_email}]);
+  await sb.from('booking_requests').update({status:remarks?'accepted_with_remarks':'accepted',owner_remarks:remarks||null,updated_at:new Date().toISOString()}).eq('id',id);
+  loadReqCount();loadReqs();loadOSlots();loadOEvDates();loadStats();
 }
 
-// ── UTILS ──
-function fmt(t) {
-  if(!t) return '';
-  const [h,m]=t.split(':');
-  const hh=parseInt(h); const ampm=hh>=12?'PM':'AM';
-  return (hh%12||12)+':'+m+' '+ampm;
+// ── OWNER TABS ──────────────────────────────────
+function oTab(t){
+  document.getElementById('o-sched').style.display=t==='s'?'block':'none';
+  document.getElementById('o-reqs').style.display=t==='r'?'block':'none';
+  document.getElementById('otab-s').classList.toggle('active',t==='s');
+  document.getElementById('otab-r').classList.toggle('active',t==='r');
+  if(t==='r')loadReqs();
 }
 
-function catColor(c) {
-  return {Meeting:'#7c3aed',Brainstorming:'#06b6d4','Event Participation':'#10b981',Learnings:'#f59e0b',Others:'#94a3b8'}[c]||'#94a3b8';
+// ── COPY LINK ──────────────────────────────────
+function copyLink(){
+  navigator.clipboard.writeText(window.location.origin+'/').then(()=>{
+    const el=document.getElementById('copy-ok');el.style.display='inline';
+    setTimeout(()=>el.style.display='none',2000);
+  });
 }
-
-function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-
-let toastTimer;
-function toast(msg,type='success') {
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.className='show '+(type||'');
-  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.className='',3000);
-}
-
-// Close modal on bg click
-document.querySelectorAll('.modal-bg').forEach(bg=>{
-  bg.addEventListener('click',e=>{ if(e.target===bg) bg.classList.remove('open'); });
-});
-
-// Init
-loadAll();
 </script>
 </body>
 </html>
