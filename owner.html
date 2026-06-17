@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owner Dashboard</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body{
+background:#0f172a;
+color:white;
+}
+.card{
+background:#1e293b;
+border:1px solid #334155;
+border-radius:20px;
+padding:24px;
+}
+</style>
+
+</head>
+<body>
+
+<header class="flex justify-between items-center p-6 border-b border-slate-700">
+
+<h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+Owner Dashboard
+</h1>
+
+<button
+onclick="window.location.href='index.html'"
+class="px-5 py-2 rounded-xl bg-cyan-600">
+Return to Visitor Dashboard
+</button>
+
+</header>
+
+
+<div class="max-w-7xl mx-auto p-6">
+
+<!-- Statistics -->
+<div class="grid lg:grid-cols-5 gap-5 mb-8">
+
+<div class="card text-center">
+<h2 class="text-3xl font-bold">12</h2>
+<p>Total Requests</p>
+</div>
+
+<div class="card text-center">
+<h2 class="text-3xl font-bold text-yellow-400">4</h2>
+<p>Pending Requests</p>
+</div>
+
+<div class="card text-center">
+<h2 class="text-3xl font-bold text-green-400">5</h2>
+<p>Approved</p>
+</div>
+
+<div class="card text-center">
+<h2 class="text-3xl font-bold text-red-400">2</h2>
+<p>Rejected</p>
+</div>
+
+<div class="card text-center">
+<h2 class="text-3xl font-bold text-orange-400">1</h2>
+<p>Cancelled</p>
+</div>
+
+</div>
+
+
+<!-- Requests -->
+<div class="card">
+
+<h2 class="text-2xl font-bold mb-6">
+Meeting Requests
+</h2>
+
+<div class="bg-slate-800 rounded-xl p-5 mb-4">
+
+<h3 class="text-xl font-semibold">
+Rahul Kumar
+</h3>
+
+<p>Email: rahul@gmail.com</p>
+<p>Date: 2026-06-20</p>
+<p>Time: 10:00 AM - 11:00 AM</p>
+
+<div class="flex gap-3 mt-4">
+
+<button class="px-4 py-2 rounded-xl bg-green-600">
+Approve
+</button>
+
+<button class="px-4 py-2 rounded-xl bg-red-600">
+Reject
+</button>
+
+<button class="px-4 py-2 rounded-xl bg-orange-600">
+Cancel
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+</html>
