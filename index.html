@@ -1,771 +1,489 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MyScheduler</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="gemini.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
-
-:root{
-  --bg:#0d1117;
-  --bg2:#161b22;
-  --bg3:#21262d;
-  --border:#30363d;
-  --accent:#238636;
-  --accent2:#2ea043;
-  --text:#e6edf3;
-  --text2:#8b949e;
-  --text3:#484f58;
-  --green:#3fb950;
-  --red:#f85149;
-  --yellow:#d29922;
-  --blue:#58a6ff;
-  --orange:#f0883e;
-}
-
-/* TOPBAR */
-.topbar{background:#161b22;border-bottom:1px solid #30363d;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.brand{font-size:1.25rem;font-weight:700;color:#e6edf3;letter-spacing:-.5px}
-.brand span{color:#3fb950}
-.topbar-right{display:flex;gap:10px;align-items:center}
-
-/* BUTTONS */
-.btn{padding:8px 16px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-size:.875rem;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px;line-height:1}
-.btn-primary{background:#238636;border-color:#2ea043;color:#fff}
-.btn-primary:hover{background:#2ea043}
-.btn-ghost{background:transparent;border-color:#30363d;color:#e6edf3}
-.btn-ghost:hover{background:#21262d;border-color:#8b949e}
-.btn-success{background:#238636;border-color:#2ea043;color:#fff}
-.btn-success:hover{background:#2ea043}
-.btn-danger{background:#da3633;border-color:#f85149;color:#fff}
-.btn-danger:hover{background:#f85149}
-.btn-warning{background:#9e6a03;border-color:#d29922;color:#fff}
-.btn-warning:hover{background:#d29922}
-.btn-blue{background:#1f6feb;border-color:#58a6ff;color:#fff}
-.btn-blue:hover{background:#388bfd}
-.btn-sm{padding:5px 12px;font-size:.78rem}
-.badge-n{background:#da3633;color:#fff;border-radius:20px;padding:1px 7px;font-size:.72rem;font-weight:600;margin-left:4px}
-
-/* PANELS */
-.panels{display:grid;grid-template-columns:260px 1fr 300px;height:calc(100vh - 56px)}
-.panel{overflow-y:auto;border-right:1px solid #30363d;padding:16px}
-.panel:last-child{border-right:none}
-.ptitle{font-size:.72rem;color:#8b949e;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;font-weight:600;padding-bottom:8px;border-bottom:1px solid #21262d}
-
-/* CALENDAR */
-.cal{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px}
-.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.cal-head h3{font-size:.9rem;font-weight:600;color:#e6edf3}
-.cal-nav{background:#21262d;border:1px solid #30363d;color:#8b949e;cursor:pointer;font-size:.85rem;padding:4px 10px;border-radius:6px;transition:all .15s}
-.cal-nav:hover{border-color:#8b949e;color:#e6edf3}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
-.cal-dn{text-align:center;font-size:.65rem;color:#484f58;padding:4px 0;font-weight:600}
-.cal-d{text-align:center;padding:6px 2px;border-radius:4px;cursor:pointer;font-size:.82rem;color:#8b949e;transition:all .15s;position:relative}
-.cal-d:hover:not(.past):not(.empty){background:#21262d;color:#e6edf3}
-.cal-d.today{background:#238636;color:#fff;font-weight:700}
-.cal-d.sel{background:#21262d;color:#3fb950;font-weight:600;outline:1px solid #238636}
-.cal-d.has-ev::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:3px;height:3px;background:#3fb950;border-radius:50%}
-.cal-d.past{color:#30363d;cursor:default}
-.cal-d.empty{cursor:default}
-.cal-d.future{color:#e6edf3}
-
-/* VISITOR TIMELINE */
-.slot-row{border-radius:6px;padding:10px 12px;margin-bottom:4px;border:1px solid #30363d;transition:all .15s;cursor:pointer;background:#161b22}
-.slot-row.avail:hover{border-color:#238636;background:#0d1117}
-.slot-row.booked{background:#0d1117;border-color:#21262d;cursor:not-allowed;opacity:.5}
-.slot-row.pend{background:#0d1117;border-color:#9e6a03;cursor:not-allowed;opacity:.6}
-.slot-time{font-size:.82rem;font-weight:600;color:#e6edf3;margin-bottom:2px}
-.slot-lbl{font-size:.72rem}
-.avail .slot-lbl{color:#3fb950}
-.booked .slot-lbl{color:#484f58}
-.pend .slot-lbl{color:#d29922}
-
-/* OWNER SLOT CARDS */
-.ocard{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px;margin-bottom:8px;border-left:3px solid #238636}
-.ocard.completed{border-left-color:#3fb950;opacity:.8}
-.ocard.cancelled{border-left-color:#da3633;opacity:.6}
-.ocard.rescheduled{border-left-color:#d29922}
-.ocard-title{font-weight:600;font-size:.9rem;margin-bottom:2px}
-.ocard-time{font-size:.75rem;color:#8b949e;margin-bottom:6px}
-.ocard-desc{font-size:.78rem;color:#8b949e;margin-bottom:8px;line-height:1.5}
-.cat-b{display:inline-block;padding:1px 8px;border-radius:20px;font-size:.68rem;font-weight:600;margin-bottom:6px;border:1px solid}
-.cat-b.Meeting{background:rgba(31,111,235,.15);color:#58a6ff;border-color:rgba(31,111,235,.3)}
-.cat-b.Brainstorming{background:rgba(188,140,255,.15);color:#bc8cff;border-color:rgba(188,140,255,.3)}
-.cat-b.Event{background:rgba(56,189,248,.15);color:#38bdf8;border-color:rgba(56,189,248,.3)}
-.cat-b.Learnings{background:rgba(63,185,80,.15);color:#3fb950;border-color:rgba(63,185,80,.3)}
-.cat-b.Others{background:rgba(139,148,158,.15);color:#8b949e;border-color:rgba(139,148,158,.3)}
-.pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:.68rem;font-weight:600;border:1px solid}
-.pill.upcoming{background:rgba(31,111,235,.1);color:#58a6ff;border-color:rgba(31,111,235,.2)}
-.pill.completed{background:rgba(63,185,80,.1);color:#3fb950;border-color:rgba(63,185,80,.2)}
-.pill.cancelled{background:rgba(218,54,51,.1);color:#f85149;border-color:rgba(218,54,51,.2)}
-.pill.rescheduled{background:rgba(210,153,34,.1);color:#d29922;border-color:rgba(210,153,34,.2)}
-.ocard-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
-
-/* STATS */
-.stats{display:flex;gap:8px;margin-bottom:14px}
-.stat{flex:1;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px;text-align:center}
-.stat-n{font-size:1.4rem;font-weight:700}
-.stat-l{font-size:.68rem;color:#8b949e;margin-top:2px}
-
-/* REQUEST CARDS */
-.rcard{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px;margin-bottom:10px}
-.rcard.conflict{border-color:#d29922}
-.conflict-w{background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);border-radius:4px;padding:6px 10px;font-size:.75rem;color:#d29922;margin-bottom:8px}
-.rcard-name{font-weight:600;font-size:.9rem}
-.rcard-meta{font-size:.78rem;color:#8b949e;margin-top:3px}
-.rcard-desc{font-size:.82rem;color:#e6edf3;margin:8px 0;line-height:1.5}
-.rcard-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
-.sbadge{display:inline-block;padding:1px 8px;border-radius:20px;font-size:.68rem;font-weight:600;border:1px solid}
-.sbadge.pending{background:rgba(210,153,34,.1);color:#d29922;border-color:rgba(210,153,34,.2)}
-.sbadge.accepted,.sbadge.accepted_with_remarks{background:rgba(63,185,80,.1);color:#3fb950;border-color:rgba(63,185,80,.2)}
-.sbadge.declined{background:rgba(218,54,51,.1);color:#f85149;border-color:rgba(218,54,51,.2)}
-.sbadge.reschedule_requested{background:rgba(31,111,235,.1);color:#58a6ff;border-color:rgba(31,111,235,.2)}
-
-/* CHAT PANEL - PLACEHOLDER */
-.chat-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#484f58;text-align:center;padding:40px 20px}
-.chat-placeholder svg{margin-bottom:16px;opacity:.3}
-.chat-placeholder h3{font-size:1rem;margin-bottom:8px;color:#8b949e}
-.chat-placeholder p{font-size:.82rem;line-height:1.6}
-
-/* MODALS */
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:center;justify-content:center;padding:16px}
-.ov.open{display:flex}
-.modal{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
-.modal h2{margin-bottom:18px;font-size:1.05rem;font-weight:700;color:#e6edf3}
-.fg{margin-bottom:12px}
-.fg label{display:block;font-size:.78rem;color:#8b949e;margin-bottom:5px;font-weight:500}
-.fg input,.fg select,.fg textarea{width:100%;padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:.875rem;outline:none;transition:border .15s}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#238636}
-.fg select option{background:#161b22}
-.fg textarea{height:80px;resize:vertical;line-height:1.5}
-.char-cnt{font-size:.7rem;color:#484f58;margin-top:3px}
-.char-cnt.ok{color:#3fb950}
-.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
-.form-err{color:#f85149;font-size:.78rem;margin-top:6px}
-
-/* PAST BOOKINGS */
-.past-section{margin-top:16px;padding-top:14px;border-top:1px solid #21262d}
-.past-section h3{font-size:.78rem;color:#8b949e;margin-bottom:8px;font-weight:600}
-.past-section input{width:100%;padding:7px 11px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:.82rem;outline:none;margin-bottom:6px}
-.past-item{background:#161b22;border-radius:6px;padding:9px 11px;margin-top:5px;font-size:.8rem;border-left:3px solid #238636}
-.ps-accepted,.ps-accepted_with_remarks{color:#3fb950;font-weight:600}
-.ps-pending{color:#d29922;font-weight:600}
-.ps-declined{color:#f85149;font-weight:600}
-.ps-reschedule_requested{color:#58a6ff;font-weight:600}
-.ps-cancelled{color:#f85149;font-weight:600}
-
-/* CANCEL HIST */
-.ch-btn{background:transparent;border:1px solid #30363d;color:#8b949e;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.78rem;margin-top:12px;transition:all .15s}
-.ch-btn:hover{border-color:#8b949e;color:#e6edf3}
-.ch-item{background:#161b22;border-left:3px solid #da3633;border-radius:6px;padding:9px 11px;margin-top:6px;font-size:.8rem}
-
-/* OWNER SUBBAR */
-.owner-bar{background:#161b22;border-bottom:1px solid #30363d;padding:8px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.tab-row{display:flex;gap:0;background:#0d1117;border:1px solid #30363d;border-radius:6px;overflow:hidden}
-.tab-btn{padding:6px 16px;border:none;cursor:pointer;font-size:.82rem;font-weight:500;color:#8b949e;background:transparent;transition:all .15s;border-right:1px solid #30363d}
-.tab-btn:last-child{border-right:none}
-.tab-btn.active{background:#21262d;color:#e6edf3}
-.tab-btn:hover:not(.active){color:#e6edf3}
-
-.no-data{text-align:center;color:#484f58;padding:32px 16px;font-size:.85rem}
-.copy-ok{color:#3fb950;font-size:.75rem;margin-left:6px}
-.success-banner{background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);border-radius:6px;padding:12px;color:#3fb950;margin-bottom:10px;font-size:.85rem}
-
-@media(max-width:900px){
-  .panels{grid-template-columns:1fr;height:auto}
-  .panel{border-right:none;border-bottom:1px solid #30363d;min-height:250px}
-  .owner-bar{flex-direction:column;align-items:flex-start}
-}
+  body { background: #0f172a; color: white; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .slot-avail { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 10px 14px; cursor: pointer; transition: all 0.2s; }
+  .slot-avail:hover { background: rgba(16,185,129,0.2); border-color: #10b981; }
+  .slot-booked { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 10px 14px; cursor: not-allowed; opacity: 0.6; }
+  .slot-pending { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 12px; padding: 10px 14px; cursor: not-allowed; opacity: 0.7; }
+  .msg-user { background: #4f46e5; border-radius: 16px 16px 4px 16px; padding: 10px 14px; margin-bottom: 8px; max-width: 85%; margin-left: auto; font-size: 0.875rem; }
+  .msg-ai { background: #1e293b; border: 1px solid #334155; border-radius: 16px 16px 16px 4px; padding: 10px 14px; margin-bottom: 8px; max-width: 85%; font-size: 0.875rem; line-height: 1.5; }
+  .cal-day { text-align: center; padding: 8px 4px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; color: #94a3b8; transition: all 0.15s; }
+  .cal-day:hover:not(.past):not(.empty) { background: rgba(99,102,241,0.2); color: white; }
+  .cal-day.today { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-weight: 700; }
+  .cal-day.selected { background: rgba(99,102,241,0.3); color: #818cf8; outline: 1px solid #6366f1; }
+  .cal-day.past { color: #334155; cursor: not-allowed; }
+  .cal-day.empty { cursor: default; }
+  .status-pending { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  .status-accepted { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  .status-declined { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  .status-reschedule_requested { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  .status-accepted_with_remarks { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+  input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 </style>
 </head>
 <body>
 
-<!-- TOPBAR -->
-<div class="topbar">
-  <span class="brand">My<span>Scheduler</span></span>
-  <div class="topbar-right" id="topbar-right">
-    <button class="btn btn-ghost" id="owner-btn" onclick="showLoginModal()">🔐 Owner Login</button>
-  </div>
-</div>
+<!-- ══ HEADER ══ -->
+<header class="flex justify-between items-center px-8 py-5 border-b border-slate-700 sticky top-0 bg-slate-900/95 backdrop-blur z-50">
+  <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+    MyScheduler
+  </h1>
+  <button id="ownerBtn" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition font-medium text-sm">
+    ⚙ Owner Dashboard
+  </button>
+</header>
 
-<!-- ══════ VISITOR VIEW ══════ -->
-<div id="visitor-view">
-  <div class="panels">
-    <!-- Panel 1: Calendar -->
-    <div class="panel">
-      <div class="ptitle">Select a Date</div>
-      <div class="cal">
-        <div class="cal-head">
-          <button class="cal-nav" onclick="vCalMo(-1)">‹</button>
-          <h3 id="v-cal-lbl"></h3>
-          <button class="cal-nav" onclick="vCalMo(1)">›</button>
+<!-- ══ VISITOR DASHBOARD ══ -->
+<div id="visitorDashboard" class="max-w-7xl mx-auto p-6">
+  <h2 class="text-2xl font-bold mb-6 text-slate-200">Request a Meeting with the Owner</h2>
+
+  <div class="grid lg:grid-cols-3 gap-6">
+
+    <!-- CARD 1: Calendar + Booking Form -->
+    <div class="card">
+      <h3 class="text-lg font-semibold mb-4 text-slate-100">📅 Select a Date</h3>
+
+      <!-- Calendar -->
+      <div class="mb-5">
+        <div class="flex items-center justify-between mb-3">
+          <button onclick="calPrev()" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">‹</button>
+          <span id="calLabel" class="font-semibold text-sm"></span>
+          <button onclick="calNext()" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">›</button>
         </div>
-        <div class="cal-grid" id="v-cal-grid"></div>
+        <div class="grid grid-cols-7 gap-1 mb-1">
+          <div class="text-center text-xs text-slate-500 font-semibold py-1">Su</div>
+          <div class="text-center text-xs text-slate-500 font-semibold py-1">Mo</div>
+          <div class="text-center text-xs text-slate-500 font-semibold py-1">Tu</div>
+          <div class="text-center text-xs text-slate-500 font-semibold py-1">We</div>
+          <div class="text-center text-xs text-slate-500 font-semibold py-1">Th</div>
+          <div class="text-center text-xs text-slate-500 font-semibold py-1">Fr</div>
+          <div class="text-center text-xs text-slate-500 font-semibold py-1">Sa</div>
+        </div>
+        <div id="calGrid" class="grid grid-cols-7 gap-1"></div>
       </div>
-      <div class="past-section">
-        <h3>View My Past Requests</h3>
-        <input type="email" id="past-email" placeholder="Enter your email"/>
-        <button class="btn btn-ghost btn-sm" style="width:100%" onclick="lookupPast()">Search</button>
-        <div id="past-results"></div>
-      </div>
-    </div>
 
-    <!-- Panel 2: Availability -->
-    <div class="panel">
-      <div class="ptitle">Availability — <span id="v-day-lbl">Select a date</span></div>
-      <div id="v-timeline"><div class="no-data">Select a date to view available slots</div></div>
-    </div>
-
-    <!-- Panel 3: Chatbot Placeholder -->
-    <div class="panel">
-      <div class="ptitle">AI Assistant</div>
-      <div class="chat-placeholder">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <h3>AI Chatbot</h3>
-        <p>AI assistant integration coming soon.<br/>Use the calendar and availability panel to book your meeting.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════ OWNER VIEW ══════ -->
-<div id="owner-view" style="display:none">
-  <div class="owner-bar">
-    <div class="tab-row">
-      <button class="tab-btn active" id="otab-s" onclick="oTab('s')">📅 Schedule</button>
-      <button class="tab-btn" id="otab-r" onclick="oTab('r')">📬 Requests<span class="badge-n" id="req-badge">0</span></button>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-ghost btn-sm" onclick="copyLink()">📋 Copy Booking Link<span class="copy-ok" id="copy-ok" style="display:none">Copied!</span></button>
-      <button class="btn btn-primary btn-sm" onclick="openAddSlot()">+ Add Slot</button>
-      <button class="btn btn-ghost btn-sm" onclick="ownerOut()">← Return to Booking Page</button>
-    </div>
-  </div>
-
-  <!-- Schedule Tab -->
-  <div id="o-sched">
-    <div class="panels">
-      <div class="panel">
-        <div class="ptitle">Calendar</div>
-        <div class="cal">
-          <div class="cal-head">
-            <button class="cal-nav" onclick="oCalMo(-1)">‹</button>
-            <h3 id="o-cal-lbl"></h3>
-            <button class="cal-nav" onclick="oCalMo(1)">›</button>
+      <!-- Booking Form -->
+      <div id="bookingForm" class="hidden">
+        <div class="border-t border-slate-700 pt-4 mb-3">
+          <p class="text-sm text-slate-400 mb-3">Booking for: <span id="formDate" class="text-indigo-400 font-semibold"></span></p>
+        </div>
+        <input id="bName" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Your Name *"/>
+        <input id="bEmail" type="email" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Your Email *"/>
+        <input id="bPurpose" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Meeting Purpose (min 25 chars) *" oninput="checkCharCount()"/>
+        <div id="charCount" class="text-xs text-slate-500 mb-3">0 / 25 characters</div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="text-xs text-slate-400 mb-1 block">Start Time *</label>
+            <input id="bStart" type="time" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/>
           </div>
-          <div class="cal-grid" id="o-cal-grid"></div>
+          <div>
+            <label class="text-xs text-slate-400 mb-1 block">End Time *</label>
+            <input id="bEnd" type="time" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/>
+          </div>
         </div>
+        <p id="formErr" class="text-red-400 text-xs mb-3 hidden"></p>
+        <button onclick="submitBooking()" class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 font-semibold text-sm hover:opacity-90 transition">
+          Submit Request
+        </button>
+        <button onclick="hideBookingForm()" class="w-full py-2 mt-2 rounded-xl bg-slate-700 text-sm text-slate-400 hover:bg-slate-600 transition">
+          Cancel
+        </button>
       </div>
-      <div class="panel">
-        <div class="ptitle">Day Schedule — <span id="o-day-lbl">Select a date</span></div>
-        <div class="stats">
-          <div class="stat"><div class="stat-n" style="color:#3fb950" id="st-c">0</div><div class="stat-l">Completed</div></div>
-          <div class="stat"><div class="stat-n" style="color:#d29922" id="st-r">0</div><div class="stat-l">Rescheduled</div></div>
-          <div class="stat"><div class="stat-n" style="color:#f85149" id="st-x">0</div><div class="stat-l">Cancelled</div></div>
-        </div>
-        <div id="o-slots"><div class="no-data">Select a date</div></div>
-        <button class="ch-btn" onclick="toggleCH()">📋 Cancellation History</button>
-        <div id="ch-list" style="display:none"></div>
-      </div>
-      <div class="panel">
-        <div class="ptitle">AI Assistant</div>
-        <div class="chat-placeholder">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <h3>AI Assistant</h3>
-          <p>AI integration coming soon.<br/>Use the dashboard panels to manage your schedule.</p>
-        </div>
+
+      <!-- Past Requests -->
+      <div class="border-t border-slate-700 pt-4 mt-4">
+        <h4 class="text-sm font-semibold text-slate-300 mb-3">📋 My Past Requests</h4>
+        <input id="pastEmail" type="email" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-600 text-sm mb-2 focus:outline-none focus:border-indigo-500" placeholder="Enter your email"/>
+        <button onclick="loadPastRequests()" class="w-full py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm transition">Search</button>
+        <div id="pastResults" class="mt-3 space-y-2"></div>
       </div>
     </div>
-  </div>
 
-  <!-- Requests Tab -->
-  <div id="o-reqs" style="display:none;padding:20px;max-width:860px;margin:0 auto">
-    <div style="display:flex;gap:4px;margin-bottom:14px">
-      <button class="btn btn-ghost btn-sm" id="rft-p" onclick="rFilter('pending')" style="border-color:#238636;color:#3fb950">⏳ Pending</button>
-      <button class="btn btn-ghost btn-sm" id="rft-a" onclick="rFilter('all')">📋 All Requests</button>
+    <!-- CARD 2: Availability Slots -->
+    <div class="card">
+      <h3 class="text-lg font-semibold mb-4 text-slate-100">⏰ Available Slots</h3>
+      <p id="slotsLabel" class="text-sm text-slate-400 mb-4">Select a date to see available slots</p>
+      <div id="slotsContainer" class="space-y-2 max-h-[500px] overflow-y-auto pr-1"></div>
     </div>
-    <div id="reqs-list"><div class="no-data">Loading...</div></div>
+
+    <!-- CARD 3: AI Chat -->
+    <div class="card flex flex-col" style="height: 580px;">
+      <h3 class="text-lg font-semibold mb-4 text-slate-100">🤖 AI Assistant</h3>
+      <div id="vChatBox" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1">
+        <div class="msg-ai">👋 Hi! I'm your scheduling assistant.<br><br>I can help you:<br>• Check availability on any date<br>• Book a meeting with the owner<br>• Answer scheduling questions<br><br>Select a date on the calendar to get started!</div>
+      </div>
+      <div class="flex gap-2 flex-shrink-0">
+        <input id="vChatInput" class="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500" placeholder="Ask about availability..." onkeydown="if(event.key==='Enter')sendVisitorChat()"/>
+        <button onclick="sendVisitorChat()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition text-sm font-medium">Send</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- ══════ MODALS ══════ -->
-<!-- Login -->
-<div class="ov" id="login-modal">
-  <div class="modal" style="max-width:340px">
-    <h2>🔐 Owner Login</h2>
-    <div class="fg"><label>Password</label><input type="password" id="login-pw" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
-    <div class="form-err" id="login-err"></div>
-    <div class="modal-btns">
-      <button class="btn btn-ghost" onclick="closeModal('login-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="doLogin()">Login</button>
-    </div>
+<!-- ══ PASSWORD MODAL ══ -->
+<div id="passwordModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50 backdrop-blur-sm">
+  <div class="bg-slate-900 border border-slate-700 p-8 rounded-2xl w-[350px] shadow-2xl">
+    <h2 class="text-xl font-bold mb-2">⚙ Owner Dashboard</h2>
+    <p class="text-slate-400 text-sm mb-5">Enter your passcode to continue</p>
+    <input id="ownerPassword" type="password" placeholder="Enter passcode" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 focus:outline-none focus:border-indigo-500" onkeydown="if(event.key==='Enter')checkOwnerLogin()"/>
+    <p id="loginErr" class="text-red-400 text-xs mb-3 hidden">Incorrect passcode. Please try again.</p>
+    <button onclick="checkOwnerLogin()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition font-semibold mb-2">Login</button>
+    <button onclick="closePasswordModal()" class="w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition text-sm text-slate-400">Cancel</button>
   </div>
 </div>
 
-<!-- Booking Form -->
-<div class="ov" id="book-modal">
-  <div class="modal">
-    <h2>Request a Meeting</h2>
-    <div class="fg"><label>Your Name *</label><input type="text" id="b-name" placeholder="Full name"/></div>
-    <div class="fg"><label>Your Email *</label><input type="email" id="b-email" placeholder="email@example.com"/></div>
-    <div class="fg"><label>Date</label><input type="text" id="b-date" readonly style="color:#8b949e"/></div>
-    <div class="fg"><label>Start Time (IST)</label><input type="time" id="b-start"/></div>
-    <div class="fg"><label>End Time (IST) *</label><input type="time" id="b-end"/></div>
-    <div class="fg">
-      <label>Reason for Meeting * (min 25 characters)</label>
-      <textarea id="b-desc" placeholder="Describe the purpose..." oninput="cc('b-desc','b-cc')"></textarea>
-      <div class="char-cnt" id="b-cc">0 / 25 characters</div>
-    </div>
-    <div class="form-err" id="b-err"></div>
-    <div class="modal-btns">
-      <button class="btn btn-ghost" onclick="closeModal('book-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="submitBooking()">Submit Request</button>
-    </div>
-  </div>
-</div>
-
-<!-- Add/Edit Slot -->
-<div class="ov" id="slot-modal">
-  <div class="modal">
-    <h2 id="slot-h">Add to Schedule</h2>
-    <div class="fg"><label>Category</label>
-      <select id="f-cat"><option>Meeting</option><option>Brainstorming</option><option>Event Participation</option><option>Learnings</option><option>Others</option></select>
-    </div>
-    <div class="fg"><label>Title</label><input type="text" id="f-title" placeholder="Enter title"/></div>
-    <div class="fg"><label>Date</label><input type="date" id="f-date"/></div>
-    <div class="fg"><label>Start Time (min 5:00 AM)</label><input type="time" id="f-start"/></div>
-    <div class="fg"><label>End Time (max 11:00 PM)</label><input type="time" id="f-end"/></div>
-    <div class="fg">
-      <label>Description (min 25 characters)</label>
-      <textarea id="f-desc" oninput="cc('f-desc','f-cc')"></textarea>
-      <div class="char-cnt" id="f-cc">0 / 25 characters</div>
-    </div>
-    <div class="form-err" id="slot-err"></div>
-    <div class="modal-btns">
-      <button class="btn btn-ghost" onclick="closeModal('slot-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="submitSlot()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- Reschedule -->
-<div class="ov" id="rs-modal">
-  <div class="modal">
-    <h2>Reschedule Slot</h2>
-    <div class="fg"><label>New Date</label><input type="date" id="rs-date"/></div>
-    <div class="fg"><label>New Start Time</label><input type="time" id="rs-start"/></div>
-    <div class="fg"><label>New End Time</label><input type="time" id="rs-end"/></div>
-    <div class="form-err" id="rs-err"></div>
-    <div class="modal-btns">
-      <button class="btn btn-ghost" onclick="closeModal('rs-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmRS()">Reschedule</button>
-    </div>
-  </div>
-</div>
-
-<!-- Remarks -->
-<div class="ov" id="rmk-modal">
-  <div class="modal">
-    <h2 id="rmk-h">Add Remarks</h2>
-    <div class="fg"><label id="rmk-lbl">Remarks</label><textarea id="rmk-in" placeholder="Optional..."></textarea></div>
-    <div class="modal-btns">
-      <button class="btn btn-ghost" onclick="closeModal('rmk-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmRmk()">Confirm</button>
-    </div>
-  </div>
-</div>
+<!-- ══ SUCCESS TOAST ══ -->
+<div id="toast" class="hidden fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium"></div>
 
 <script>
-const SB_URL='https://jcnqistogwhpaocxxolt.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjbnFpc3RvZ3docGFvY3h4b2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NzM0NTIsImV4cCI6MjA5NzI0OTQ1Mn0.qqfxRf9EcnXdsAD8MTfjLZoIIpYOuOQuap3V0Q_HB5M';
-const PASS='Usharama@7505';
-const sb=supabase.createClient(SB_URL,SB_KEY);
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const OWNER_PASS = "Usharama@7505";
 
-let vCalY,vCalM,vSel=null;
-let oCalY,oCalM,oSel=null;
-let oEvDates=new Set();
-let editId=null,rsId=null;
-let rmkAct=null,rmkId=null,rmkData=null;
-let allReqs=[],rMode='pending';
-let lastEmail='';
-let chVis=false;
+// ── STATE ──────────────────────────────────────────────────────────────────
+let calYear, calMonth, selectedDate = null;
 
-function ist(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}))}
-function fd(d){return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`}
-function p2(n){return String(n).padStart(2,'0')}
-function ft(t){if(!t)return '';const[h,m]=t.split(':');const hr=parseInt(h);return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'} IST`}
-function openModal(id){document.getElementById(id).classList.add('open')}
-function closeModal(id){document.getElementById(id).classList.remove('open')}
-function cc(tid,cid){const n=document.getElementById(tid).value.length;const el=document.getElementById(cid);el.textContent=`${n} / 25 characters`;el.className=n>=25?'char-cnt ok':'char-cnt'}
-document.addEventListener('click',e=>{if(e.target.classList.contains('ov'))e.target.classList.remove('open')});
+// ── INIT ───────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  const now = getIST();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  selectedDate = formatDate(now);
+  renderCalendar();
+  loadSlots(selectedDate);
+  if (sessionStorage.getItem("owner_auth")) showOwnerDashboard();
+});
 
-window.onload=()=>{
-  const now=ist();
-  vCalY=oCalY=now.getFullYear();vCalM=oCalM=now.getMonth();
-  vSel=oSel=fd(now);
-  renderVCal();vSelDate(vSel);
-  if(sessionStorage.getItem('ms_auth'))showOwner();
-  // Realtime
-  sb.channel('rt')
-    .on('postgres_changes',{event:'*',schema:'public',table:'booking_requests'},()=>{
-      if(vSel)renderTimeline(vSel);
-      if(lastEmail)lookupPast(true);
-      if(sessionStorage.getItem('ms_auth')){loadReqs();loadReqCount();}
-    })
-    .on('postgres_changes',{event:'*',schema:'public',table:'schedules'},()=>{
-      if(vSel)renderTimeline(vSel);
-      if(sessionStorage.getItem('ms_auth')){loadOSlots();loadStats();loadOEvDates();}
-    }).subscribe();
-};
-
-// ── AUTH ──────────────────────────────────────
-function showLoginModal(){
-  document.getElementById('login-pw').value='';
-  document.getElementById('login-err').textContent='';
-  openModal('login-modal');
+// ── IST HELPERS ────────────────────────────────────────────────────────────
+function getIST() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
 }
-function doLogin(){
-  if(document.getElementById('login-pw').value===PASS){
-    sessionStorage.setItem('ms_auth','1');
-    closeModal('login-modal');showOwner();
-  }else{
-    document.getElementById('login-err').textContent='Incorrect password. Try again.';
+function formatDate(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function pad(n) { return String(n).padStart(2, "0"); }
+function formatTime(t) {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hr = parseInt(h);
+  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"} IST`;
+}
+
+// ── CALENDAR ───────────────────────────────────────────────────────────────
+function renderCalendar() {
+  const lbl = new Date(calYear, calMonth, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+  document.getElementById("calLabel").textContent = lbl;
+
+  const grid = document.getElementById("calGrid");
+  grid.innerHTML = "";
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = formatDate(getIST());
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement("div");
+    el.className = "cal-day empty";
+    grid.appendChild(el);
   }
-}
-function showOwner(){
-  document.getElementById('visitor-view').style.display='none';
-  document.getElementById('owner-view').style.display='block';
-  document.getElementById('owner-btn').style.display='none';
-  const now=ist();oCalY=now.getFullYear();oCalM=now.getMonth();oSel=fd(now);
-  renderOCal();oSelDate(oSel);
-  Promise.all([loadOEvDates(),loadStats(),loadReqCount(),loadReqs()]);
-}
-function ownerOut(){
-  sessionStorage.removeItem('ms_auth');
-  document.getElementById('owner-view').style.display='none';
-  document.getElementById('visitor-view').style.display='block';
-  document.getElementById('owner-btn').style.display='inline-flex';
-}
 
-// ── VISITOR CALENDAR ──────────────────────────
-function renderVCal(){
-  const lbl=new Date(vCalY,vCalM,1).toLocaleString('en-US',{month:'long',year:'numeric'});
-  document.getElementById('v-cal-lbl').textContent=lbl;
-  const grid=document.getElementById('v-cal-grid');grid.innerHTML='';
-  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>{
-    const e=document.createElement('div');e.className='cal-dn';e.textContent=d;grid.appendChild(e);
-  });
-  const first=new Date(vCalY,vCalM,1).getDay(),total=new Date(vCalY,vCalM+1,0).getDate(),today=fd(ist());
-  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-d empty';grid.appendChild(e);}
-  for(let d=1;d<=total;d++){
-    const ds=`${vCalY}-${p2(vCalM+1)}-${p2(d)}`;
-    const el=document.createElement('div');el.className='cal-d';el.textContent=d;
-    if(ds<today){el.classList.add('past');}
-    else{
-      el.classList.add('future');
-      el.onclick=()=>vSelDate(ds);
-      if(ds===today)el.classList.add('today');
-      if(ds===vSel)el.classList.add('sel');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${pad(calMonth+1)}-${pad(d)}`;
+    const el = document.createElement("div");
+    el.className = "cal-day";
+    el.textContent = d;
+
+    if (dateStr < today) {
+      el.classList.add("past");
+    } else {
+      if (dateStr === today) el.classList.add("today");
+      if (dateStr === selectedDate) el.classList.add("selected");
+      el.onclick = () => selectDate(dateStr);
     }
     grid.appendChild(el);
   }
 }
-function vCalMo(d){vCalM+=d;if(vCalM<0){vCalM=11;vCalY--;}if(vCalM>11){vCalM=0;vCalY++;}renderVCal();}
-function vSelDate(ds){
-  vSel=ds;renderVCal();
-  const[y,m,d]=ds.split('-');
-  document.getElementById('v-day-lbl').textContent=new Date(y,m-1,d).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
-  renderTimeline(ds);
+
+function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
+
+function selectDate(dateStr) {
+  selectedDate = dateStr;
+  renderCalendar();
+  const [y, m, d] = dateStr.split("-");
+  document.getElementById("slotsLabel").textContent =
+    new Date(y, m-1, d).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  loadSlots(dateStr);
+  showBookingForm(dateStr);
 }
 
-// ── VISITOR TIMELINE ──────────────────────────
-async function renderTimeline(date){
-  const el=document.getElementById('v-timeline');
-  el.innerHTML='<div class="no-data">Loading...</div>';
-  const{data:booked}=await sb.from('schedules').select('start_time,end_time').eq('date',date).neq('status','cancelled');
-  const{data:pend}=await sb.from('booking_requests').select('start_time,end_time').eq('requested_date',date).eq('status','pending');
-  const slots=[];
-  for(let h=5;h<23;h++){
-    for(let m=0;m<60;m+=30){
-      const s=`${p2(h)}:${p2(m)}`;
-      const eh=m===30?h+1:h,em=m===30?0:30;
-      const e=`${p2(eh)}:${p2(em)}`;
-      const isB=(booked||[]).some(b=>b.start_time.slice(0,5)<e&&b.end_time.slice(0,5)>s);
-      const isP=!isB&&(pend||[]).some(p=>p.start_time.slice(0,5)<e&&p.end_time.slice(0,5)>s);
-      slots.push({s,e,isB,isP});
+// ── SLOTS ──────────────────────────────────────────────────────────────────
+async function loadSlots(date) {
+  const container = document.getElementById("slotsContainer");
+  container.innerHTML = '<p class="text-slate-500 text-sm">Loading...</p>';
+
+  const { data: booked } = await supabaseClient
+    .from("schedules")
+    .select("start_time, end_time")
+    .eq("date", date)
+    .neq("status", "cancelled");
+
+  const { data: pending } = await supabaseClient
+    .from("booking_requests")
+    .select("start_time, end_time")
+    .eq("requested_date", date)
+    .eq("status", "pending");
+
+  // Generate 30-min slots 5am-11pm
+  const slots = [];
+  for (let h = 5; h < 23; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const s = `${pad(h)}:${pad(m)}`;
+      const eh = m === 30 ? h + 1 : h, em = m === 30 ? 0 : 30;
+      const e = `${pad(eh)}:${pad(em)}`;
+      const isB = (booked || []).some(b => b.start_time.slice(0,5) < e && b.end_time.slice(0,5) > s);
+      const isP = !isB && (pending || []).some(p => p.start_time.slice(0,5) < e && p.end_time.slice(0,5) > s);
+      slots.push({ s, e, isB, isP });
     }
   }
-  if(slots.every(x=>x.isB||x.isP)){el.innerHTML='<div class="no-data">No available slots on this date</div>';return;}
-  el.innerHTML=slots.map(sl=>`
-    <div class="slot-row ${sl.isB?'booked':sl.isP?'pend':'avail'}"
-      ${!sl.isB&&!sl.isP?`onclick="openBook('${sl.s}','${sl.e}')"`:''}> 
-      <div class="slot-time">${ft(sl.s)} – ${ft(sl.e)}</div>
-      <div class="slot-lbl">${sl.isB?'🔒 Booked':sl.isP?'⏳ Pending':'✓ Available'}</div>
-    </div>`).join('');
+
+  if (slots.every(x => x.isB || x.isP)) {
+    container.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No available slots on this date</p>';
+    return;
+  }
+
+  container.innerHTML = slots.map(sl => `
+    <div class="${sl.isB ? "slot-booked" : sl.isP ? "slot-pending" : "slot-avail"}"
+      ${!sl.isB && !sl.isP ? `onclick="pickSlot('${sl.s}','${sl.e}')"` : ""}>
+      <div class="flex justify-between items-center">
+        <span class="text-sm font-medium">${formatTime(sl.s)} – ${formatTime(sl.e)}</span>
+        <span class="text-xs ${sl.isB ? "text-red-400" : sl.isP ? "text-yellow-400" : "text-green-400"}">
+          ${sl.isB ? "🔒 Booked" : sl.isP ? "⏳ Pending" : "✓ Available"}
+        </span>
+      </div>
+    </div>`).join("");
 }
 
-// ── BOOKING FORM ──────────────────────────────
-function openBook(s,e){
-  document.getElementById('b-date').value=vSel;
-  document.getElementById('b-start').value=s;
-  document.getElementById('b-end').value=e;
-  ['b-name','b-email','b-desc'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('b-err').textContent='';
-  document.getElementById('b-cc').textContent='0 / 25 characters';
-  document.getElementById('b-cc').className='char-cnt';
-  openModal('book-modal');
-}
-async function submitBooking(){
-  const name=document.getElementById('b-name').value.trim();
-  const email=document.getElementById('b-email').value.trim();
-  const date=document.getElementById('b-date').value;
-  const start=document.getElementById('b-start').value;
-  const end=document.getElementById('b-end').value;
-  const desc=document.getElementById('b-desc').value.trim();
-  const err=document.getElementById('b-err');err.textContent='';
-  if(!name||!email||!start||!end||!desc){err.textContent='All fields required';return;}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='Invalid email format';return;}
-  if(end<=start){err.textContent='End time must be after start time';return;}
-  if(desc.length<25){err.textContent='Description needs at least 25 characters';return;}
-  const{data:ov}=await sb.from('schedules').select('id').eq('date',date).neq('status','cancelled').lt('start_time',end).gt('end_time',start);
-  if(ov&&ov.length){err.textContent='This time is no longer available. Please choose another slot.';return;}
-  const{error}=await sb.from('booking_requests').insert([{visitor_name:name,visitor_email:email,requested_date:date,start_time:start,end_time:end,description:desc,status:'pending'}]);
-  if(error){err.textContent='Submission failed. Please try again.';return;}
-  closeModal('book-modal');renderTimeline(date);
-  const tl=document.getElementById('v-timeline');
-  const b=document.createElement('div');b.className='success-banner';
-  b.innerHTML='✓ Request submitted! You will be notified once the owner reviews it.';
-  tl.prepend(b);setTimeout(()=>b.remove(),5000);
+function pickSlot(start, end) {
+  document.getElementById("bStart").value = start;
+  document.getElementById("bEnd").value = end;
+  document.getElementById("bookingForm").classList.remove("hidden");
+  document.getElementById("bookingForm").scrollIntoView({ behavior: "smooth" });
 }
 
-// ── PAST BOOKINGS ──────────────────────────────
-async function lookupPast(auto=false){
-  const email=auto?lastEmail:document.getElementById('past-email').value.trim();
-  if(!email)return;lastEmail=email;
-  const el=document.getElementById('past-results');
-  const{data}=await sb.from('booking_requests').select('*').eq('visitor_email',email).order('created_at',{ascending:false});
-  if(!data||!data.length){el.innerHTML='<p style="color:#484f58;font-size:.8rem;margin-top:6px">No requests found for this email.</p>';return;}
-  el.innerHTML=data.map(r=>`
-    <div class="past-item">
-      <strong>${r.requested_date}</strong> · ${ft(r.start_time)} – ${ft(r.end_time)}<br>
-      Status: <span class="ps-${r.status}">${r.status.replace(/_/g,' ')}</span>
-      ${r.owner_remarks?`<br><span style="color:#8b949e;font-size:.78rem">${r.owner_remarks}</span>`:''}
-    </div>`).join('');
+// ── BOOKING FORM ───────────────────────────────────────────────────────────
+function showBookingForm(date) {
+  document.getElementById("formDate").textContent =
+    new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  document.getElementById("bookingForm").classList.remove("hidden");
 }
 
-// ── OWNER CALENDAR ──────────────────────────────
-async function loadOEvDates(){
-  const{data}=await sb.from('schedules').select('date').neq('status','cancelled');
-  oEvDates=new Set(data?.map(r=>r.date)||[]);renderOCal();
+function hideBookingForm() {
+  document.getElementById("bookingForm").classList.add("hidden");
 }
-function renderOCal(){
-  const lbl=new Date(oCalY,oCalM,1).toLocaleString('en-US',{month:'long',year:'numeric'});
-  document.getElementById('o-cal-lbl').textContent=lbl;
-  const grid=document.getElementById('o-cal-grid');grid.innerHTML='';
-  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>{const e=document.createElement('div');e.className='cal-dn';e.textContent=d;grid.appendChild(e);});
-  const first=new Date(oCalY,oCalM,1).getDay(),total=new Date(oCalY,oCalM+1,0).getDate(),today=fd(ist());
-  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-d empty';grid.appendChild(e);}
-  for(let d=1;d<=total;d++){
-    const ds=`${oCalY}-${p2(oCalM+1)}-${p2(d)}`;
-    const el=document.createElement('div');el.className='cal-d future';el.textContent=d;
-    if(ds===today)el.classList.add('today');
-    if(ds===oSel)el.classList.add('sel');
-    if(oEvDates.has(ds))el.classList.add('has-ev');
-    el.onclick=()=>oSelDate(ds);
-    grid.appendChild(el);
+
+function checkCharCount() {
+  const n = document.getElementById("bPurpose").value.length;
+  const el = document.getElementById("charCount");
+  el.textContent = `${n} / 25 characters`;
+  el.className = n >= 25 ? "text-xs text-green-400 mb-3" : "text-xs text-slate-500 mb-3";
+}
+
+async function submitBooking() {
+  const name = document.getElementById("bName").value.trim();
+  const email = document.getElementById("bEmail").value.trim();
+  const purpose = document.getElementById("bPurpose").value.trim();
+  const start = document.getElementById("bStart").value;
+  const end = document.getElementById("bEnd").value;
+  const errEl = document.getElementById("formErr");
+
+  errEl.classList.add("hidden");
+
+  if (!name || !email || !purpose || !start || !end) {
+    showErr("All fields are required"); return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showErr("Invalid email format"); return;
+  }
+  if (end <= start) {
+    showErr("End time must be after start time"); return;
+  }
+  if (purpose.length < 25) {
+    showErr("Purpose needs at least 25 characters"); return;
+  }
+
+  // Check overlap
+  const { data: ov } = await supabaseClient
+    .from("schedules").select("id")
+    .eq("date", selectedDate).neq("status", "cancelled")
+    .lt("start_time", end).gt("end_time", start);
+  if (ov && ov.length) {
+    showErr("This time is no longer available. Please choose another slot."); return;
+  }
+
+  const { error } = await supabaseClient.from("booking_requests").insert([{
+    visitor_name: name,
+    visitor_email: email,
+    requested_date: selectedDate,
+    start_time: start,
+    end_time: end,
+    description: purpose,
+    status: "pending"
+  }]);
+
+  if (error) { showErr("Submission failed. Please try again."); return; }
+
+  showToast("✓ Request submitted! You'll receive an email once the owner reviews it.");
+  hideBookingForm();
+  loadSlots(selectedDate);
+  document.getElementById("bName").value = "";
+  document.getElementById("bEmail").value = "";
+  document.getElementById("bPurpose").value = "";
+  document.getElementById("bStart").value = "";
+  document.getElementById("bEnd").value = "";
+}
+
+function showErr(msg) {
+  const el = document.getElementById("formErr");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+// ── PAST REQUESTS ──────────────────────────────────────────────────────────
+async function loadPastRequests() {
+  const email = document.getElementById("pastEmail").value.trim();
+  const el = document.getElementById("pastResults");
+  if (!email) { el.innerHTML = '<p class="text-slate-500 text-xs">Enter your email to search</p>'; return; }
+
+  const { data } = await supabaseClient
+    .from("booking_requests").select("*")
+    .eq("visitor_email", email)
+    .order("created_at", { ascending: false });
+
+  if (!data || !data.length) {
+    el.innerHTML = '<p class="text-slate-500 text-xs mt-2">No requests found for this email.</p>';
+    return;
+  }
+
+  el.innerHTML = data.map(r => `
+    <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-sm font-medium">${r.requested_date}</span>
+        <span class="status-${r.status}">${r.status.replace(/_/g," ")}</span>
+      </div>
+      <p class="text-xs text-slate-400">${formatTime(r.start_time)} – ${formatTime(r.end_time)}</p>
+      ${r.owner_remarks ? `<p class="text-xs text-slate-500 mt-1 italic">${r.owner_remarks}</p>` : ""}
+    </div>`).join("");
+}
+
+// ── VISITOR AI CHAT ────────────────────────────────────────────────────────
+async function sendVisitorChat() {
+  const inp = document.getElementById("vChatInput");
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = "";
+
+  // Show user message
+  appendChat("vChatBox", msg, "user");
+  visitorChatHistory.push({ role: "user", text: msg });
+
+  // Loading indicator
+  const loadId = "load_" + Date.now();
+  document.getElementById("vChatBox").innerHTML +=
+    `<div id="${loadId}" class="msg-ai text-slate-400 italic">⋯ thinking...</div>`;
+  scrollChat("vChatBox");
+
+  // Get available slots context
+  let slotsContext = "";
+  if (selectedDate) {
+    const { data: booked } = await supabaseClient
+      .from("schedules").select("start_time,end_time")
+      .eq("date", selectedDate).neq("status", "cancelled");
+    const bookedSlots = (booked || []).map(b => `${b.start_time.slice(0,5)}-${b.end_time.slice(0,5)}`);
+    slotsContext = bookedSlots.length ? `Booked slots: ${bookedSlots.join(", ")}` : "All slots available";
+  }
+
+  // Call AI
+  const reply = await askVisitorAI(msg, slotsContext ? [slotsContext] : [], selectedDate || "");
+
+  // Remove loading, show reply
+  const loadEl = document.getElementById(loadId);
+  if (loadEl) loadEl.remove();
+  appendChat("vChatBox", reply, "ai");
+  visitorChatHistory.push({ role: "assistant", text: reply });
+  await saveChatMessage(msg, "user", "visitor");
+  await saveChatMessage(reply, "assistant", "visitor");
+}
+
+function appendChat(boxId, text, role) {
+  const box = document.getElementById(boxId);
+  const div = document.createElement("div");
+  div.className = role === "user" ? "msg-user" : "msg-ai";
+  div.innerHTML = String(text).replace(/\n/g, "<br>");
+  box.appendChild(div);
+  scrollChat(boxId);
+}
+
+function scrollChat(boxId) {
+  const el = document.getElementById(boxId);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── AUTH ───────────────────────────────────────────────────────────────────
+document.getElementById("ownerBtn").addEventListener("click", () => {
+  document.getElementById("passwordModal").classList.remove("hidden");
+  document.getElementById("ownerPassword").value = "";
+  document.getElementById("loginErr").classList.add("hidden");
+});
+
+function closePasswordModal() {
+  document.getElementById("passwordModal").classList.add("hidden");
+}
+
+function checkOwnerLogin() {
+  const pw = document.getElementById("ownerPassword").value;
+  if (pw === OWNER_PASS) {
+    sessionStorage.setItem("owner_auth", "1");
+    closePasswordModal();
+    showOwnerDashboard();
+  } else {
+    document.getElementById("loginErr").classList.remove("hidden");
   }
 }
-function oCalMo(d){oCalM+=d;if(oCalM<0){oCalM=11;oCalY--;}if(oCalM>11){oCalM=0;oCalY++;}renderOCal();}
-function oSelDate(ds){
-  oSel=ds;renderOCal();
-  const[y,m,d]=ds.split('-');
-  document.getElementById('o-day-lbl').textContent=new Date(y,m-1,d).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  loadOSlots();
+
+function showOwnerDashboard() {
+  window.location.href = "owner.html";
 }
 
-// ── OWNER SLOTS ──────────────────────────────
-async function loadOSlots(){
-  if(!oSel)return;
-  const{data}=await sb.from('schedules').select('*').eq('date',oSel).order('start_time');
-  const el=document.getElementById('o-slots');
-  if(!data||!data.length){el.innerHTML='<div class="no-data">No slots for this date</div>';return;}
-  const cm={'Event Participation':'Event'};
-  el.innerHTML=data.map(s=>`
-    <div class="ocard ${s.status}">
-      <span class="cat-b ${cm[s.category]||s.category}">${s.category}</span>
-      <div class="ocard-title">${s.title}</div>
-      <div class="ocard-time">${ft(s.start_time)} – ${ft(s.end_time)}</div>
-      <div class="ocard-desc">${s.description||''}</div>
-      <div style="font-size:.72rem;color:#484f58">
-        <span class="pill ${s.status}">${s.status}</span>
-        ${s.visitor_name?' · '+s.visitor_name:''}
-      </div>
-      <div class="ocard-actions">
-        ${s.status!=='completed'&&s.status!=='cancelled'?`
-          <button class="btn btn-success btn-sm" onclick="doComplete('${s.id}')">✓ Done</button>
-          <button class="btn btn-ghost btn-sm" onclick="doEdit(${JSON.stringify(s).replace(/"/g,'&quot;')})">Edit</button>
-          <button class="btn btn-warning btn-sm" onclick="doRS('${s.id}')">Reschedule</button>
-          <button class="btn btn-danger btn-sm" onclick="doCX('${s.id}')">Cancel</button>
-        `:`<span style="color:#484f58;font-size:.75rem">${s.status==='completed'?'✓ Completed':'✕ Cancelled'}</span>`}
-      </div>
-    </div>`).join('');
-}
-async function loadStats(){
-  const{data}=await sb.from('schedules').select('status');
-  document.getElementById('st-c').textContent=data?.filter(r=>r.status==='completed').length||0;
-  document.getElementById('st-r').textContent=data?.filter(r=>r.status==='rescheduled').length||0;
-  document.getElementById('st-x').textContent=data?.filter(r=>r.status==='cancelled').length||0;
-}
-async function doComplete(id){await sb.from('schedules').update({status:'completed',updated_at:new Date().toISOString()}).eq('id',id);loadOSlots();loadStats();}
-async function doCX(id){if(!confirm('Cancel this slot?'))return;await sb.from('schedules').update({status:'cancelled',updated_at:new Date().toISOString()}).eq('id',id);loadOSlots();loadStats();loadOEvDates();}
-function doRS(id){rsId=id;document.getElementById('rs-date').value=oSel||'';document.getElementById('rs-err').textContent='';openModal('rs-modal');}
-async function confirmRS(){
-  const date=document.getElementById('rs-date').value,start=document.getElementById('rs-start').value,end=document.getElementById('rs-end').value;
-  if(!date||!start||!end){document.getElementById('rs-err').textContent='All fields required';return;}
-  if(end<=start){document.getElementById('rs-err').textContent='End must be after start';return;}
-  if(await hasOv(date,start,end,rsId)){document.getElementById('rs-err').textContent='Overlaps existing slot!';return;}
-  await sb.from('schedules').update({date,start_time:start,end_time:end,status:'rescheduled',updated_at:new Date().toISOString()}).eq('id',rsId);
-  closeModal('rs-modal');loadOSlots();loadStats();loadOEvDates();
-}
-function doEdit(s){
-  editId=s.id;document.getElementById('slot-h').textContent='Edit Slot';
-  document.getElementById('f-cat').value=s.category;document.getElementById('f-title').value=s.title;
-  document.getElementById('f-date').value=s.date;
-  document.getElementById('f-start').value=(s.start_time||'').slice(0,5);
-  document.getElementById('f-end').value=(s.end_time||'').slice(0,5);
-  document.getElementById('f-desc').value=s.description||'';
-  document.getElementById('slot-err').textContent='';cc('f-desc','f-cc');openModal('slot-modal');
-}
-function openAddSlot(){
-  editId=null;document.getElementById('slot-h').textContent='Add to Schedule';
-  ['f-title','f-desc'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('f-date').value=oSel||fd(ist());
-  document.getElementById('f-start').value='';document.getElementById('f-end').value='';
-  document.getElementById('slot-err').textContent='';
-  document.getElementById('f-cc').textContent='0 / 25 characters';document.getElementById('f-cc').className='char-cnt';
-  openModal('slot-modal');
-}
-async function submitSlot(){
-  const cat=document.getElementById('f-cat').value,title=document.getElementById('f-title').value.trim();
-  const date=document.getElementById('f-date').value,start=document.getElementById('f-start').value,end=document.getElementById('f-end').value;
-  const desc=document.getElementById('f-desc').value.trim(),err=document.getElementById('slot-err');
-  if(!title||!date||!start||!end||!desc){err.textContent='All fields required';return;}
-  if(end<=start){err.textContent='End must be after start';return;}
-  if(start<'05:00'){err.textContent='Start must be 5:00 AM or later';return;}
-  if(end>'23:00'){err.textContent='End must be 11:00 PM or earlier';return;}
-  if(desc.length<25){err.textContent='Description needs 25+ characters';return;}
-  if(await hasOv(date,start,end,editId)){err.textContent='Overlaps existing slot!';return;}
-  if(editId){await sb.from('schedules').update({category:cat,title,date,start_time:start,end_time:end,description:desc,updated_at:new Date().toISOString()}).eq('id',editId);}
-  else{await sb.from('schedules').insert([{category:cat,title,date,start_time:start,end_time:end,description:desc,status:'upcoming',created_by:'owner'}]);}
-  closeModal('slot-modal');loadOSlots();loadOEvDates();loadStats();
-}
-async function hasOv(date,start,end,exId=null){
-  let q=sb.from('schedules').select('id').eq('date',date).neq('status','cancelled').lt('start_time',end).gt('end_time',start);
-  if(exId)q=q.neq('id',exId);const{data}=await q;return data&&data.length>0;
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.remove("hidden");
+  setTimeout(() => t.classList.add("hidden"), 4000);
 }
 
-// ── CANCEL HISTORY ──────────────────────────────
-async function toggleCH(){
-  chVis=!chVis;const el=document.getElementById('ch-list');el.style.display=chVis?'block':'none';
-  if(!chVis)return;
-  const{data}=await sb.from('schedules').select('*').eq('status','cancelled').order('updated_at',{ascending:false});
-  el.innerHTML=data?.length?data.map(s=>`<div class="ch-item"><strong>${s.title}</strong><br><span style="color:#484f58;font-size:.75rem">${s.date} · ${ft(s.start_time)} – ${ft(s.end_time)}</span></div>`).join(''):'<p style="color:#484f58;margin-top:8px">No cancelled slots</p>';
-}
-
-// ── REQUESTS ──────────────────────────────────
-async function loadReqCount(){
-  const{count}=await sb.from('booking_requests').select('*',{count:'exact',head:true}).eq('status','pending');
-  document.getElementById('req-badge').textContent=count||0;
-}
-async function loadReqs(){
-  const{data}=await sb.from('booking_requests').select('*').order('created_at',{ascending:false});
-  allReqs=data||[];renderReqs();
-}
-function rFilter(f){
-  rMode=f;
-  document.getElementById('rft-p').style.borderColor=f==='pending'?'#238636':'#30363d';
-  document.getElementById('rft-p').style.color=f==='pending'?'#3fb950':'#8b949e';
-  document.getElementById('rft-a').style.borderColor=f==='all'?'#238636':'#30363d';
-  document.getElementById('rft-a').style.color=f==='all'?'#3fb950':'#8b949e';
-  renderReqs();
-}
-function renderReqs(){
-  const el=document.getElementById('reqs-list');
-  const list=rMode==='pending'?allReqs.filter(r=>r.status==='pending'):allReqs;
-  if(!list.length){el.innerHTML='<div class="no-data">No requests</div>';return;}
-  const pend=allReqs.filter(r=>r.status==='pending');
-  el.innerHTML=list.map(r=>{
-    const ip=r.status==='pending';
-    const conf=ip&&pend.some(p=>p.id!==r.id&&p.requested_date===r.requested_date&&p.start_time<r.end_time&&p.end_time>r.start_time);
-    return `<div class="rcard ${conf?'conflict':''}">
-      ${conf?'<div class="conflict-w">⚠ Another request overlaps this time slot</div>':''}
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="rcard-name">${r.visitor_name}</span>
-        <span class="sbadge ${r.status}">${r.status.replace(/_/g,' ')}</span>
-      </div>
-      <div class="rcard-meta">📧 ${r.visitor_email}</div>
-      <div class="rcard-meta">📅 ${r.requested_date} · ${ft(r.start_time)} – ${ft(r.end_time)}</div>
-      <div class="rcard-desc">${r.description}</div>
-      ${r.owner_remarks?`<div style="font-size:.78rem;color:#8b949e;font-style:italic">Note: ${r.owner_remarks}</div>`:''}
-      ${ip?`<div class="rcard-actions">
-        <button class="btn btn-success btn-sm" onclick="reqAct('${r.id}','accept')">✓ Accept</button>
-        <button class="btn btn-ghost btn-sm" onclick="reqAct('${r.id}','accept_remarks')">Accept + Note</button>
-        <button class="btn btn-warning btn-sm" onclick="reqAct('${r.id}','reschedule')">Reschedule</button>
-        <button class="btn btn-danger btn-sm" onclick="reqAct('${r.id}','decline')">✕ Decline</button>
-      </div>`:''}
-    </div>`;
-  }).join('');
-}
-async function reqAct(id,action){
-  const req=allReqs.find(r=>r.id===id);if(!req)return;
-  if(action==='accept'){if(!confirm('Accept this booking?'))return;await acceptReq(id,req,null);}
-  else{
-    rmkAct=action;rmkId=id;rmkData=req;
-    const t={accept_remarks:'Accept with Note',reschedule:'Request Reschedule',decline:'Decline'};
-    const l={accept_remarks:'Add a note for the visitor:',reschedule:'Suggest a new time:',decline:'Reason (optional):'};
-    document.getElementById('rmk-h').textContent=t[action];
-    document.getElementById('rmk-lbl').textContent=l[action];
-    document.getElementById('rmk-in').value='';openModal('rmk-modal');
-  }
-}
-async function confirmRmk(){
-  const remarks=document.getElementById('rmk-in').value.trim();closeModal('rmk-modal');
-  if(rmkAct==='accept_remarks')await acceptReq(rmkId,rmkData,remarks);
-  else if(rmkAct==='reschedule'){await sb.from('booking_requests').update({status:'reschedule_requested',owner_remarks:remarks,updated_at:new Date().toISOString()}).eq('id',rmkId);}
-  else if(rmkAct==='decline'){await sb.from('booking_requests').update({status:'declined',owner_remarks:remarks||null,updated_at:new Date().toISOString()}).eq('id',rmkId);}
-  loadReqCount();loadReqs();loadOSlots();loadOEvDates();
-}
-async function acceptReq(id,req,remarks){
-  const ov=await hasOv(req.requested_date,(req.start_time||'').slice(0,5),(req.end_time||'').slice(0,5));
-  if(ov){alert('This time slot is already booked! Cannot accept.');return;}
-  await sb.from('schedules').insert([{category:'Meeting',title:`Meeting with ${req.visitor_name}`,date:req.requested_date,start_time:req.start_time,end_time:req.end_time,description:req.description,status:'upcoming',created_by:'visitor',visitor_name:req.visitor_name,visitor_email:req.visitor_email}]);
-  await sb.from('booking_requests').update({status:remarks?'accepted_with_remarks':'accepted',owner_remarks:remarks||null,updated_at:new Date().toISOString()}).eq('id',id);
-  loadReqCount();loadReqs();loadOSlots();loadOEvDates();loadStats();
-}
-
-// ── OWNER TABS ──────────────────────────────────
-function oTab(t){
-  document.getElementById('o-sched').style.display=t==='s'?'block':'none';
-  document.getElementById('o-reqs').style.display=t==='r'?'block':'none';
-  document.getElementById('otab-s').classList.toggle('active',t==='s');
-  document.getElementById('otab-r').classList.toggle('active',t==='r');
-  if(t==='r')loadReqs();
-}
-
-// ── COPY LINK ──────────────────────────────────
-function copyLink(){
-  navigator.clipboard.writeText(window.location.origin+'/').then(()=>{
-    const el=document.getElementById('copy-ok');el.style.display='inline';
-    setTimeout(()=>el.style.display='none',2000);
-  });
-}
+// Realtime updates
+supabaseClient.channel("visitor-rt")
+  .on("postgres_changes", { event: "*", schema: "public", table: "booking_requests" }, () => {
+    if (selectedDate) loadSlots(selectedDate);
+  })
+  .on("postgres_changes", { event: "*", schema: "public", table: "schedules" }, () => {
+    if (selectedDate) loadSlots(selectedDate);
+  })
+  .subscribe();
 </script>
 </body>
 </html>

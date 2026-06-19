@@ -3,112 +3,442 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Owner Dashboard</title>
-
+<title>Owner Dashboard — MyScheduler</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="gemini.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-
 <style>
-body{
-background:#0f172a;
-color:white;
-}
-.card{
-background:#1e293b;
-border:1px solid #334155;
-border-radius:20px;
-padding:24px;
-}
+  body { background: #0f172a; color: white; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .msg-user { background: #4f46e5; border-radius: 16px 16px 4px 16px; padding: 10px 14px; margin-bottom: 8px; max-width: 85%; margin-left: auto; font-size: 0.875rem; }
+  .msg-ai { background: #1e293b; border: 1px solid #334155; border-radius: 16px 16px 16px 4px; padding: 10px 14px; margin-bottom: 8px; max-width: 85%; font-size: 0.875rem; line-height: 1.5; }
+  .status-pending { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  .status-accepted,.status-accepted_with_remarks { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  .status-declined { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  .status-reschedule_requested { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 </style>
-
 </head>
 <body>
 
-<header class="flex justify-between items-center p-6 border-b border-slate-700">
-
-<h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-Owner Dashboard
-</h1>
-
-<button
-onclick="window.location.href='index.html'"
-class="px-5 py-2 rounded-xl bg-cyan-600">
-Return to Visitor Dashboard
-</button>
-
+<!-- ══ HEADER ══ -->
+<header class="flex justify-between items-center px-8 py-5 border-b border-slate-700 sticky top-0 bg-slate-900/95 backdrop-blur z-50">
+  <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+    Owner Dashboard
+  </h1>
+  <div class="flex gap-3">
+    <button onclick="copyBookingLink()" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition text-sm" id="copyBtn">
+      📋 Copy Booking Link
+    </button>
+    <button onclick="returnToVisitor()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 transition text-sm font-medium">
+      ← Return to Visitor Dashboard
+    </button>
+  </div>
 </header>
 
+<!-- ══ STATS ══ -->
+<div class="max-w-7xl mx-auto px-6 pt-6">
+  <div class="grid grid-cols-5 gap-4 mb-6">
+    <div class="card text-center">
+      <h2 class="text-3xl font-bold text-indigo-400" id="statTotal">0</h2>
+      <p class="text-slate-400 text-sm mt-1">Total Requests</p>
+    </div>
+    <div class="card text-center">
+      <h2 class="text-3xl font-bold text-yellow-400" id="statPending">0</h2>
+      <p class="text-slate-400 text-sm mt-1">Pending</p>
+    </div>
+    <div class="card text-center">
+      <h2 class="text-3xl font-bold text-green-400" id="statApproved">0</h2>
+      <p class="text-slate-400 text-sm mt-1">Approved</p>
+    </div>
+    <div class="card text-center">
+      <h2 class="text-3xl font-bold text-red-400" id="statRejected">0</h2>
+      <p class="text-slate-400 text-sm mt-1">Rejected</p>
+    </div>
+    <div class="card text-center">
+      <h2 class="text-3xl font-bold text-orange-400" id="statCancelled">0</h2>
+      <p class="text-slate-400 text-sm mt-1">Cancelled</p>
+    </div>
+  </div>
 
-<div class="max-w-7xl mx-auto p-6">
+  <div class="grid lg:grid-cols-3 gap-6">
 
-<!-- Statistics -->
-<div class="grid lg:grid-cols-5 gap-5 mb-8">
+    <!-- REQUESTS PANEL -->
+    <div class="card lg:col-span-2" style="max-height: 620px; overflow-y: auto;">
+      <div class="flex justify-between items-center mb-5">
+        <h2 class="text-xl font-bold">Meeting Requests</h2>
+        <div class="flex gap-2">
+          <button onclick="filterReqs('pending')" id="ft-pend" class="px-3 py-1 rounded-lg bg-indigo-600 text-xs font-medium">⏳ Pending</button>
+          <button onclick="filterReqs('all')" id="ft-all" class="px-3 py-1 rounded-lg bg-slate-700 text-xs font-medium">All</button>
+        </div>
+      </div>
+      <div id="requestsList" class="space-y-4">
+        <p class="text-slate-500 text-sm">Loading requests...</p>
+      </div>
+    </div>
 
-<div class="card text-center">
-<h2 class="text-3xl font-bold">12</h2>
-<p>Total Requests</p>
+    <!-- AI CHAT PANEL -->
+    <div class="card flex flex-col" style="height: 620px;">
+      <h3 class="text-lg font-semibold mb-4">🤖 AI Assistant</h3>
+      <div id="oChatBox" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1">
+        <div class="msg-ai">👋 Hi! I'm your scheduling AI.<br><br>Ask me:<br>• "What do I have today?"<br>• "Summarize pending requests"<br>• "When am I free this week?"<br>• "Should I approve this request?"</div>
+      </div>
+      <div class="flex gap-2 flex-shrink-0">
+        <input id="oChatInput" class="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendOwnerChat()"/>
+        <button onclick="sendOwnerChat()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition text-sm font-medium">Send</button>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<div class="card text-center">
-<h2 class="text-3xl font-bold text-yellow-400">4</h2>
-<p>Pending Requests</p>
+<!-- ══ REMARKS MODAL ══ -->
+<div id="remarksModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50 backdrop-blur-sm">
+  <div class="bg-slate-900 border border-slate-700 p-7 rounded-2xl w-[400px]">
+    <h2 class="text-lg font-bold mb-2" id="remarksTitle">Add Remarks</h2>
+    <p class="text-slate-400 text-sm mb-4" id="remarksLabel">Optional note for the visitor:</p>
+    <textarea id="remarksInput" rows="3" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm mb-4 focus:outline-none focus:border-indigo-500 resize-none" placeholder="Optional..."></textarea>
+    <div class="flex gap-3">
+      <button onclick="closeRemarksModal()" class="flex-1 py-2 rounded-xl bg-slate-700 text-sm">Cancel</button>
+      <button onclick="confirmAction()" class="flex-1 py-2 rounded-xl bg-indigo-600 text-sm font-medium" id="confirmBtn">Confirm</button>
+    </div>
+  </div>
 </div>
 
-<div class="card text-center">
-<h2 class="text-3xl font-bold text-green-400">5</h2>
-<p>Approved</p>
-</div>
+<!-- ══ TOAST ══ -->
+<div id="toast" class="hidden fixed bottom-6 right-6 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium"></div>
 
-<div class="card text-center">
-<h2 class="text-3xl font-bold text-red-400">2</h2>
-<p>Rejected</p>
-</div>
+<script>
+let currentAction = null;
+let currentReqId = null;
+let currentReq = null;
+let allRequests = [];
+let filterMode = "pending";
 
-<div class="card text-center">
-<h2 class="text-3xl font-bold text-orange-400">1</h2>
-<p>Cancelled</p>
-</div>
+// ── INIT ───────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  if (!sessionStorage.getItem("owner_auth")) {
+    window.location.href = "index.html";
+    return;
+  }
+  loadRequests();
+  loadScheduleStats();
+});
 
-</div>
+function returnToVisitor() {
+  sessionStorage.removeItem("owner_auth");
+  window.location.href = "index.html";
+}
 
+function copyBookingLink() {
+  navigator.clipboard.writeText(window.location.origin + "/index.html").then(() => {
+    document.getElementById("copyBtn").textContent = "✓ Copied!";
+    setTimeout(() => document.getElementById("copyBtn").textContent = "📋 Copy Booking Link", 2000);
+  });
+}
 
-<!-- Requests -->
-<div class="card">
+// ── HELPER ─────────────────────────────────────────────────────────────────
+function formatTime(t) {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hr = parseInt(h);
+  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"} IST`;
+}
+function pad(n) { return String(n).padStart(2, "0"); }
 
-<h2 class="text-2xl font-bold mb-6">
-Meeting Requests
-</h2>
+// ── STATS ──────────────────────────────────────────────────────────────────
+async function loadScheduleStats() {
+  const { data } = await supabaseClient.from("schedules").select("status");
+  // (optional schedule stats — using requests for main stats)
+}
 
-<div class="bg-slate-800 rounded-xl p-5 mb-4">
+async function updateStats() {
+  const t = allRequests.length;
+  const p = allRequests.filter(r => r.status === "pending").length;
+  const a = allRequests.filter(r => r.status === "accepted" || r.status === "accepted_with_remarks").length;
+  const d = allRequests.filter(r => r.status === "declined").length;
+  const c = allRequests.filter(r => r.status === "reschedule_requested").length;
+  document.getElementById("statTotal").textContent = t;
+  document.getElementById("statPending").textContent = p;
+  document.getElementById("statApproved").textContent = a;
+  document.getElementById("statRejected").textContent = d;
+  document.getElementById("statCancelled").textContent = c;
+}
 
-<h3 class="text-xl font-semibold">
-Rahul Kumar
-</h3>
+// ── REQUESTS ───────────────────────────────────────────────────────────────
+async function loadRequests() {
+  const { data } = await supabaseClient
+    .from("booking_requests").select("*")
+    .order("created_at", { ascending: false });
+  allRequests = data || [];
+  updateStats();
+  renderRequests();
+}
 
-<p>Email: rahul@gmail.com</p>
-<p>Date: 2026-06-20</p>
-<p>Time: 10:00 AM - 11:00 AM</p>
+function filterReqs(mode) {
+  filterMode = mode;
+  document.getElementById("ft-pend").className = `px-3 py-1 rounded-lg text-xs font-medium ${mode === "pending" ? "bg-indigo-600" : "bg-slate-700"}`;
+  document.getElementById("ft-all").className = `px-3 py-1 rounded-lg text-xs font-medium ${mode === "all" ? "bg-indigo-600" : "bg-slate-700"}`;
+  renderRequests();
+}
 
-<div class="flex gap-3 mt-4">
+function renderRequests() {
+  const el = document.getElementById("requestsList");
+  const list = filterMode === "pending" ? allRequests.filter(r => r.status === "pending") : allRequests;
 
-<button class="px-4 py-2 rounded-xl bg-green-600">
-Approve
-</button>
+  if (!list.length) {
+    el.innerHTML = `<p class="text-slate-500 text-sm text-center py-8">${filterMode === "pending" ? "No pending requests" : "No requests found"}</p>`;
+    return;
+  }
 
-<button class="px-4 py-2 rounded-xl bg-red-600">
-Reject
-</button>
+  const pendingList = allRequests.filter(r => r.status === "pending");
 
-<button class="px-4 py-2 rounded-xl bg-orange-600">
-Cancel
-</button>
+  el.innerHTML = list.map(r => {
+    const isPending = r.status === "pending";
+    const hasConflict = isPending && pendingList.some(p =>
+      p.id !== r.id &&
+      p.requested_date === r.requested_date &&
+      p.start_time < r.end_time &&
+      p.end_time > r.start_time
+    );
 
-</div>
+    return `
+      <div class="bg-slate-800 rounded-xl p-5 border ${hasConflict ? "border-yellow-600/40" : "border-slate-700"} transition hover:border-slate-600">
+        ${hasConflict ? `<div class="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-2 mb-3 text-xs text-yellow-400">⚠ Overlapping request exists for this time slot</div>` : ""}
+        <div class="flex justify-between items-start mb-2">
+          <h3 class="font-semibold text-lg">${r.visitor_name}</h3>
+          <span class="status-${r.status}">${r.status.replace(/_/g, " ")}</span>
+        </div>
+        <p class="text-slate-400 text-sm">📧 ${r.visitor_email}</p>
+        <p class="text-slate-400 text-sm">📅 ${r.requested_date} · ${formatTime(r.start_time)} – ${formatTime(r.end_time)}</p>
+        <p class="text-slate-300 text-sm mt-2 leading-relaxed">${r.description}</p>
+        ${r.owner_remarks ? `<p class="text-slate-500 text-xs mt-2 italic">Note: ${r.owner_remarks}</p>` : ""}
+        ${isPending ? `
+          <div class="flex flex-wrap gap-2 mt-4">
+            <button onclick="quickAction('${r.id}', 'accept')" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-medium transition">✓ Approve</button>
+            <button onclick="openRemarks('${r.id}', 'accept_remarks')" class="px-4 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-sm font-medium transition">Approve + Note</button>
+            <button onclick="openRemarks('${r.id}', 'reschedule')" class="px-4 py-2 rounded-lg bg-yellow-700 hover:bg-yellow-600 text-sm font-medium transition">Reschedule</button>
+            <button onclick="openRemarks('${r.id}', 'decline')" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-sm font-medium transition">✕ Reject</button>
+          </div>` : ""}
+      </div>`;
+  }).join("");
+}
 
-</div>
+// ── ACTIONS ────────────────────────────────────────────────────────────────
+async function quickAction(id, action) {
+  currentReq = allRequests.find(r => r.id === id);
+  if (!currentReq) return;
+  if (action === "accept") {
+    if (!confirm("Approve this booking request?")) return;
+    await processAction(id, "accept", "");
+  }
+}
 
-</div>
+function openRemarks(id, action) {
+  currentAction = action;
+  currentReqId = id;
+  currentReq = allRequests.find(r => r.id === id);
+  const titles = { accept_remarks: "Approve with Note", reschedule: "Request Reschedule", decline: "Reject Request" };
+  const labels = { accept_remarks: "Add a note for the visitor:", reschedule: "Suggest a new time or explain:", decline: "Reason for rejection (optional):" };
+  document.getElementById("remarksTitle").textContent = titles[action];
+  document.getElementById("remarksLabel").textContent = labels[action];
+  document.getElementById("remarksInput").value = "";
+  document.getElementById("remarksModal").classList.remove("hidden");
+}
 
-</div>
+function closeRemarksModal() {
+  document.getElementById("remarksModal").classList.add("hidden");
+}
 
+async function confirmAction() {
+  const remarks = document.getElementById("remarksInput").value.trim();
+  closeRemarksModal();
+  await processAction(currentReqId, currentAction, remarks);
+}
+
+async function processAction(id, action, remarks) {
+  const req = allRequests.find(r => r.id === id);
+  if (!req) return;
+
+  if (action === "accept" || action === "accept_remarks") {
+    // Check overlap before accepting
+    const { data: ov } = await supabaseClient
+      .from("schedules").select("id")
+      .eq("date", req.requested_date).neq("status", "cancelled")
+      .lt("start_time", req.end_time).gt("end_time", req.start_time);
+
+    if (ov && ov.length) {
+      showToast("⚠ This time slot is already booked!", "red");
+      return;
+    }
+
+    // Create schedule entry
+    await supabaseClient.from("schedules").insert([{
+      category: "Meeting",
+      title: `Meeting with ${req.visitor_name}`,
+      date: req.requested_date,
+      start_time: req.start_time,
+      end_time: req.end_time,
+      description: req.description,
+      status: "upcoming",
+      created_by: "visitor",
+      visitor_name: req.visitor_name,
+      visitor_email: req.visitor_email
+    }]);
+
+    // Update request status
+    await supabaseClient.from("booking_requests").update({
+      status: remarks ? "accepted_with_remarks" : "accepted",
+      owner_remarks: remarks || null,
+      updated_at: new Date().toISOString()
+    }).eq("id", id);
+
+    // Send approval email
+    await sendEmail(req, "approved", remarks);
+    showToast("✓ Booking approved and email sent!", "green");
+
+  } else if (action === "reschedule") {
+    await supabaseClient.from("booking_requests").update({
+      status: "reschedule_requested",
+      owner_remarks: remarks,
+      updated_at: new Date().toISOString()
+    }).eq("id", id);
+    await sendEmail(req, "reschedule", remarks);
+    showToast("✓ Reschedule request sent!", "yellow");
+
+  } else if (action === "decline") {
+    await supabaseClient.from("booking_requests").update({
+      status: "declined",
+      owner_remarks: remarks || null,
+      updated_at: new Date().toISOString()
+    }).eq("id", id);
+    await sendEmail(req, "rejected", remarks);
+    showToast("✓ Request rejected and email sent!", "red");
+  }
+
+  await loadRequests();
+}
+
+// ── EMAIL SYSTEM ───────────────────────────────────────────────────────────
+// Uses EmailJS (free, no backend needed — 200 emails/month free)
+// SETUP: Go to emailjs.com, create account, get Service ID + Template ID + Public Key
+// Then replace the values below
+
+async function sendEmail(req, type, remarks = "") {
+  // ── OPTION 1: EmailJS (recommended — free, easy) ──
+  // Uncomment and configure after setting up emailjs.com account:
+  /*
+  const EMAILJS_SERVICE_ID = "your_service_id";    // from emailjs.com
+  const EMAILJS_TEMPLATE_ID = "your_template_id";  // from emailjs.com
+  const EMAILJS_PUBLIC_KEY = "your_public_key";    // from emailjs.com
+
+  const subjects = {
+    approved: "✓ Your Meeting Has Been Approved — MyScheduler",
+    rejected: "Your Meeting Request Has Been Declined — MyScheduler",
+    reschedule: "Reschedule Requested — MyScheduler"
+  };
+
+  const messages = {
+    approved: `Your meeting on ${req.requested_date} from ${formatTime(req.start_time)} to ${formatTime(req.end_time)} has been APPROVED.${remarks ? " Note from owner: " + remarks : ""}`,
+    rejected: `Your meeting request for ${req.requested_date} has been declined.${remarks ? " Reason: " + remarks : ""}`,
+    reschedule: `The owner has requested to reschedule your meeting on ${req.requested_date}. Message: ${remarks || "Please suggest a new time."}`
+  };
+
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: req.visitor_email,
+      to_name: req.visitor_name,
+      subject: subjects[type],
+      message: messages[type],
+      meeting_date: req.requested_date,
+      start_time: formatTime(req.start_time),
+      end_time: formatTime(req.end_time),
+      status: type.toUpperCase(),
+      remarks: remarks || "None"
+    }, EMAILJS_PUBLIC_KEY);
+    console.log("Email sent to", req.visitor_email);
+  } catch(e) {
+    console.error("Email failed:", e);
+  }
+  */
+
+  // ── OPTION 2: Log email (current fallback) ──
+  console.log("📧 EMAIL TO:", req.visitor_email);
+  console.log("Type:", type, "| Date:", req.requested_date, "| Time:", formatTime(req.start_time), "-", formatTime(req.end_time));
+  if (remarks) console.log("Remarks:", remarks);
+  // Email is logged — visitor sees status update in "My Past Requests" section
+}
+
+// ── OWNER AI CHAT ──────────────────────────────────────────────────────────
+async function sendOwnerChat() {
+  const inp = document.getElementById("oChatInput");
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = "";
+
+  appendOwnerChat(msg, "user");
+  ownerChatHistory.push({ role: "user", text: msg });
+
+  // Loading
+  const loadId = "load_" + Date.now();
+  document.getElementById("oChatBox").innerHTML +=
+    `<div id="${loadId}" class="msg-ai text-slate-400 italic">⋯ thinking...</div>`;
+  document.getElementById("oChatBox").scrollTop = document.getElementById("oChatBox").scrollHeight;
+
+  // Get schedule context
+  const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+  const { data: sched } = await supabaseClient
+    .from("schedules").select("*")
+    .gte("date", todayStr).order("date").order("start_time").limit(20);
+  const { data: reqs } = await supabaseClient
+    .from("booking_requests").select("*").eq("status", "pending");
+
+  const schedText = sched?.length
+    ? sched.map(s => `[${s.date} ${s.start_time?.slice(0,5)}-${s.end_time?.slice(0,5)}] ${s.title} (${s.status})`).join("\n")
+    : "No upcoming events";
+  const reqText = reqs?.length
+    ? reqs.map(r => `${r.visitor_name} (${r.visitor_email}): ${r.requested_date} ${r.start_time?.slice(0,5)}-${r.end_time?.slice(0,5)}`).join("\n")
+    : "No pending requests";
+
+  const reply = await askOwnerAI(msg, schedText, reqText);
+
+  const loadEl = document.getElementById(loadId);
+  if (loadEl) loadEl.remove();
+  appendOwnerChat(reply, "ai");
+  ownerChatHistory.push({ role: "assistant", text: reply });
+  await saveChatMessage(msg, "user", "owner");
+  await saveChatMessage(reply, "assistant", "owner");
+}
+
+function appendOwnerChat(text, role) {
+  const box = document.getElementById("oChatBox");
+  const div = document.createElement("div");
+  div.className = role === "user" ? "msg-user" : "msg-ai";
+  div.innerHTML = String(text).replace(/\n/g, "<br>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(msg, color = "green") {
+  const t = document.getElementById("toast");
+  const colors = { green: "bg-green-600", red: "bg-red-600", yellow: "bg-yellow-600" };
+  t.className = `fixed bottom-6 right-6 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium ${colors[color] || "bg-green-600"}`;
+  t.textContent = msg;
+  setTimeout(() => t.classList.add("hidden"), 4000);
+}
+
+// ── REALTIME ───────────────────────────────────────────────────────────────
+supabaseClient.channel("owner-rt")
+  .on("postgres_changes", { event: "*", schema: "public", table: "booking_requests" }, () => {
+    loadRequests();
+  })
+  .on("postgres_changes", { event: "*", schema: "public", table: "schedules" }, () => {
+    loadRequests();
+  })
+  .subscribe();
+</script>
 </body>
 </html>
