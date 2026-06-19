@@ -8,6 +8,7 @@
 <script src="supabase.js"></script>
 <script src="gemini.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   body { background: #0f172a; color: white; }
   .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
@@ -325,49 +326,44 @@ async function processAction(id, action, remarks) {
 // SETUP: Go to emailjs.com, create account, get Service ID + Template ID + Public Key
 // Then replace the values below
 
-async function sendEmail(req, type, remarks = "") {
-  // ── OPTION 1: EmailJS (recommended — free, easy) ──
-  // Uncomment and configure after setting up emailjs.com account:
-  /*
-  const EMAILJS_SERVICE_ID = "your_service_id";    // from emailjs.com
-  const EMAILJS_TEMPLATE_ID = "your_template_id";  // from emailjs.com
-  const EMAILJS_PUBLIC_KEY = "your_public_key";    // from emailjs.com
+// ── EmailJS Configuration ──────────────────────────────────────────────────
+const EMAILJS_SERVICE_ID  = "service_yoopnyg";
+const EMAILJS_TEMPLATE_ID = "template_anwow39";
+const EMAILJS_PUBLIC_KEY  = "7PtWUw7mxp1fRlLb6";
 
+async function sendEmail(req, type, remarks = "") {
   const subjects = {
-    approved: "✓ Your Meeting Has Been Approved — MyScheduler",
-    rejected: "Your Meeting Request Has Been Declined — MyScheduler",
+    approved:   "✓ Your Meeting Has Been Approved — MyScheduler",
+    rejected:   "Your Meeting Request Has Been Declined — MyScheduler",
     reschedule: "Reschedule Requested — MyScheduler"
   };
 
   const messages = {
-    approved: `Your meeting on ${req.requested_date} from ${formatTime(req.start_time)} to ${formatTime(req.end_time)} has been APPROVED.${remarks ? " Note from owner: " + remarks : ""}`,
-    rejected: `Your meeting request for ${req.requested_date} has been declined.${remarks ? " Reason: " + remarks : ""}`,
-    reschedule: `The owner has requested to reschedule your meeting on ${req.requested_date}. Message: ${remarks || "Please suggest a new time."}`
+    approved:   `Great news! Your meeting on ${req.requested_date} from ${formatTime(req.start_time)} to ${formatTime(req.end_time)} has been APPROVED.${remarks ? "\n\nNote from owner: " + remarks : ""}`,
+    rejected:   `Your meeting request for ${req.requested_date} (${formatTime(req.start_time)} – ${formatTime(req.end_time)}) has been declined.${remarks ? "\n\nReason: " + remarks : ""}`,
+    reschedule: `The owner has requested to reschedule your meeting on ${req.requested_date}.\n\nMessage: ${remarks || "Please suggest a new time."}`
   };
 
   try {
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email: req.visitor_email,
-      to_name: req.visitor_name,
-      subject: subjects[type],
-      message: messages[type],
-      meeting_date: req.requested_date,
-      start_time: formatTime(req.start_time),
-      end_time: formatTime(req.end_time),
-      status: type.toUpperCase(),
-      remarks: remarks || "None"
-    }, EMAILJS_PUBLIC_KEY);
-    console.log("Email sent to", req.visitor_email);
-  } catch(e) {
-    console.error("Email failed:", e);
-  }
-  */
+    emailjs.init(EMAILJS_PUBLIC_KEY);
 
-  // ── OPTION 2: Log email (current fallback) ──
-  console.log("📧 EMAIL TO:", req.visitor_email);
-  console.log("Type:", type, "| Date:", req.requested_date, "| Time:", formatTime(req.start_time), "-", formatTime(req.end_time));
-  if (remarks) console.log("Remarks:", remarks);
-  // Email is logged — visitor sees status update in "My Past Requests" section
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     req.visitor_email,
+      to_name:      req.visitor_name,
+      subject:      subjects[type],
+      message:      messages[type],
+      meeting_date: req.requested_date,
+      start_time:   formatTime(req.start_time),
+      end_time:     formatTime(req.end_time),
+      status:       type === "approved" ? "✓ APPROVED" : type === "rejected" ? "✕ REJECTED" : "⟳ RESCHEDULE REQUESTED",
+      remarks:      remarks || "None"
+    });
+
+    console.log("✅ Email sent to", req.visitor_email);
+  } catch(e) {
+    console.error("❌ Email failed:", e);
+    // Still show success — status is updated in Supabase
+  }
 }
 
 // ── OWNER AI CHAT ──────────────────────────────────────────────────────────
