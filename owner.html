@@ -5,436 +5,636 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Owner Dashboard — MyScheduler</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="supabase.js"></script>
 <script src="gemini.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
-  body { background: #0f172a; color: white; }
-  .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-  .msg-user { background: #4f46e5; border-radius: 16px 16px 4px 16px; padding: 10px 14px; margin-bottom: 8px; max-width: 85%; margin-left: auto; font-size: 0.875rem; }
-  .msg-ai { background: #1e293b; border: 1px solid #334155; border-radius: 16px 16px 16px 4px; padding: 10px 14px; margin-bottom: 8px; max-width: 85%; font-size: 0.875rem; line-height: 1.5; }
-  .status-pending { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  .status-accepted,.status-accepted_with_remarks { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  .status-declined { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  .status-reschedule_requested { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+body{background:#0f172a;color:white}
+.card{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.msg-user{background:#4f46e5;border-radius:16px 16px 4px 16px;padding:10px 14px;margin-bottom:8px;max-width:85%;margin-left:auto;font-size:.875rem;word-break:break-word}
+.msg-ai{background:#1e293b;border:1px solid #334155;border-radius:16px 16px 16px 4px;padding:10px 14px;margin-bottom:8px;max-width:85%;font-size:.875rem;line-height:1.6;word-break:break-word}
+.cal-day{text-align:center;padding:7px 2px;border-radius:8px;cursor:pointer;font-size:.82rem;color:#94a3b8;transition:all .15s;position:relative}
+.cal-day:hover:not(.empty){background:rgba(99,102,241,.2);color:white}
+.cal-day.today{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700}
+.cal-day.selected{background:rgba(99,102,241,.3);color:#818cf8;outline:1px solid #6366f1}
+.cal-day.has-event::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:#10b981;border-radius:50%}
+.cal-day.past-owner{color:#64748b} /* owners CAN click past dates */
+.status-pending{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
+.status-accepted,.status-accepted_with_remarks{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
+.status-declined{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
+.status-reschedule_requested{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
+.slot-card{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;border-left:3px solid #6366f1}
+.slot-card.completed{border-left-color:#10b981;opacity:.8}
+.slot-card.cancelled{border-left-color:#ef4444;opacity:.6}
+.slot-card.rescheduled{border-left-color:#f59e0b}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:4px}
 </style>
 </head>
 <body>
 
-<!-- ══ HEADER ══ -->
+<!-- HEADER -->
 <header class="flex justify-between items-center px-8 py-5 border-b border-slate-700 sticky top-0 bg-slate-900/95 backdrop-blur z-50">
-  <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-    Owner Dashboard
-  </h1>
+  <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">Owner Dashboard</h1>
   <div class="flex gap-3">
-    <button onclick="copyBookingLink()" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition text-sm" id="copyBtn">
-      📋 Copy Booking Link
-    </button>
-    <button onclick="returnToVisitor()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 transition text-sm font-medium">
-      ← Return to Visitor Dashboard
-    </button>
+    <button onclick="copyLink()" id="copyBtn" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition text-sm">📋 Copy Booking Link</button>
+    <button onclick="returnToVisitor()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 transition text-sm font-medium">← Return to Visitor Dashboard</button>
   </div>
 </header>
 
-<!-- ══ STATS ══ -->
+<!-- STATS -->
 <div class="max-w-7xl mx-auto px-6 pt-6">
   <div class="grid grid-cols-5 gap-4 mb-6">
-    <div class="card text-center">
-      <h2 class="text-3xl font-bold text-indigo-400" id="statTotal">0</h2>
-      <p class="text-slate-400 text-sm mt-1">Total Requests</p>
-    </div>
-    <div class="card text-center">
-      <h2 class="text-3xl font-bold text-yellow-400" id="statPending">0</h2>
-      <p class="text-slate-400 text-sm mt-1">Pending</p>
-    </div>
-    <div class="card text-center">
-      <h2 class="text-3xl font-bold text-green-400" id="statApproved">0</h2>
-      <p class="text-slate-400 text-sm mt-1">Approved</p>
-    </div>
-    <div class="card text-center">
-      <h2 class="text-3xl font-bold text-red-400" id="statRejected">0</h2>
-      <p class="text-slate-400 text-sm mt-1">Rejected</p>
-    </div>
-    <div class="card text-center">
-      <h2 class="text-3xl font-bold text-orange-400" id="statCancelled">0</h2>
-      <p class="text-slate-400 text-sm mt-1">Cancelled</p>
-    </div>
+    <div class="card text-center"><h2 class="text-3xl font-bold text-indigo-400" id="stTotal">0</h2><p class="text-slate-400 text-sm mt-1">Total</p></div>
+    <div class="card text-center"><h2 class="text-3xl font-bold text-yellow-400" id="stPend">0</h2><p class="text-slate-400 text-sm mt-1">Pending</p></div>
+    <div class="card text-center"><h2 class="text-3xl font-bold text-green-400" id="stAcc">0</h2><p class="text-slate-400 text-sm mt-1">Approved</p></div>
+    <div class="card text-center"><h2 class="text-3xl font-bold text-red-400" id="stRej">0</h2><p class="text-slate-400 text-sm mt-1">Rejected</p></div>
+    <div class="card text-center"><h2 class="text-3xl font-bold text-orange-400" id="stCan">0</h2><p class="text-slate-400 text-sm mt-1">Cancelled</p></div>
   </div>
 
-  <div class="grid lg:grid-cols-3 gap-6">
+  <!-- TABS -->
+  <div class="flex gap-2 mb-6">
+    <button onclick="showTab('schedule')" id="tab-schedule" class="px-5 py-2 rounded-xl bg-indigo-600 text-sm font-medium">📅 Schedule</button>
+    <button onclick="showTab('requests')" id="tab-requests" class="px-5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-medium">📬 Requests <span id="pendBadge" class="ml-1 bg-red-500 text-white text-xs rounded-full px-2">0</span></button>
+  </div>
 
-    <!-- REQUESTS PANEL -->
-    <div class="card lg:col-span-2" style="max-height: 620px; overflow-y: auto;">
-      <div class="flex justify-between items-center mb-5">
-        <h2 class="text-xl font-bold">Meeting Requests</h2>
-        <div class="flex gap-2">
-          <button onclick="filterReqs('pending')" id="ft-pend" class="px-3 py-1 rounded-lg bg-indigo-600 text-xs font-medium">⏳ Pending</button>
-          <button onclick="filterReqs('all')" id="ft-all" class="px-3 py-1 rounded-lg bg-slate-700 text-xs font-medium">All</button>
-        </div>
+  <!-- ══ SCHEDULE TAB ══ -->
+  <div id="scheduleTab" class="grid lg:grid-cols-3 gap-6">
+
+    <!-- Calendar (owners can access ALL dates) -->
+    <div class="card">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">📅 Calendar</h3>
+        <button onclick="openAddSlot()" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm font-medium transition">+ Add Slot</button>
       </div>
-      <div id="requestsList" class="space-y-4">
-        <p class="text-slate-500 text-sm">Loading requests...</p>
+      <div class="flex items-center justify-between mb-3">
+        <button onclick="oCalPrev()" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">‹</button>
+        <span id="oCalLabel" class="font-semibold text-sm text-slate-200"></span>
+        <button onclick="oCalNext()" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">›</button>
       </div>
+      <div class="grid grid-cols-7 gap-1 mb-1">
+        <div class="text-center text-xs text-slate-500 font-semibold py-1">Su</div>
+        <div class="text-center text-xs text-slate-500 font-semibold py-1">Mo</div>
+        <div class="text-center text-xs text-slate-500 font-semibold py-1">Tu</div>
+        <div class="text-center text-xs text-slate-500 font-semibold py-1">We</div>
+        <div class="text-center text-xs text-slate-500 font-semibold py-1">Th</div>
+        <div class="text-center text-xs text-slate-500 font-semibold py-1">Fr</div>
+        <div class="text-center text-xs text-slate-500 font-semibold py-1">Sa</div>
+      </div>
+      <div id="oCalGrid" class="grid grid-cols-7 gap-1"></div>
     </div>
 
-    <!-- AI CHAT PANEL -->
-    <div class="card flex flex-col" style="height: 620px;">
-      <h3 class="text-lg font-semibold mb-4">🤖 AI Assistant</h3>
-      <div id="oChatBox" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1">
-        <div class="msg-ai">👋 Hi! I'm your scheduling AI.<br><br>Ask me:<br>• "What do I have today?"<br>• "Summarize pending requests"<br>• "When am I free this week?"<br>• "Should I approve this request?"</div>
+    <!-- Day Schedule -->
+    <div class="card">
+      <h3 class="text-lg font-semibold mb-1">🗓 Day Schedule</h3>
+      <p id="oDayLabel" class="text-sm text-slate-400 mb-4">Select a date</p>
+      <!-- Stats row -->
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="bg-slate-800 rounded-xl p-3 text-center"><div class="text-xl font-bold text-green-400" id="sDone">0</div><div class="text-xs text-slate-400">Completed</div></div>
+        <div class="bg-slate-800 rounded-xl p-3 text-center"><div class="text-xl font-bold text-yellow-400" id="sRs">0</div><div class="text-xs text-slate-400">Rescheduled</div></div>
+        <div class="bg-slate-800 rounded-xl p-3 text-center"><div class="text-xl font-bold text-red-400" id="sCx">0</div><div class="text-xs text-slate-400">Cancelled</div></div>
+      </div>
+      <div id="oSlots" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+        <p class="text-slate-500 text-sm text-center py-4">Select a date to view slots</p>
+      </div>
+      <!-- Cancel History Toggle -->
+      <button onclick="toggleCH()" class="mt-4 w-full py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm text-slate-400 transition">📋 Cancellation History</button>
+      <div id="chList" class="hidden mt-3 space-y-2 max-h-40 overflow-y-auto"></div>
+    </div>
+
+    <!-- AI Chat -->
+    <div class="card flex flex-col" style="height:580px">
+      <h3 class="text-lg font-semibold mb-3">🤖 AI Assistant</h3>
+      <div id="oChatBox" class="flex-1 overflow-y-auto pr-1 mb-3">
+        <div class="msg-ai">👋 Hi! I'm your scheduling AI.<br><br>Ask me:<br>• "What do I have today?"<br>• "Summarize pending requests"<br>• "When am I free this week?"<br>• "Any scheduling conflicts?"</div>
       </div>
       <div class="flex gap-2 flex-shrink-0">
-        <input id="oChatInput" class="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendOwnerChat()"/>
-        <button onclick="sendOwnerChat()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition text-sm font-medium">Send</button>
+        <input id="oChatIn" class="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')oSendChat()"/>
+        <button onclick="oSendChat()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition text-sm font-medium">Send</button>
       </div>
     </div>
+  </div>
 
+  <!-- ══ REQUESTS TAB ══ -->
+  <div id="requestsTab" class="hidden">
+    <div class="flex gap-2 mb-4">
+      <button onclick="filterReqs('pending')" id="ft-p" class="px-4 py-2 rounded-xl bg-indigo-600 text-sm font-medium">⏳ Pending</button>
+      <button onclick="filterReqs('all')" id="ft-a" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-medium">📋 All</button>
+    </div>
+    <div id="reqsList" class="space-y-4 max-w-4xl"><p class="text-slate-500 text-sm">Loading...</p></div>
   </div>
 </div>
 
-<!-- ══ REMARKS MODAL ══ -->
-<div id="remarksModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50 backdrop-blur-sm">
-  <div class="bg-slate-900 border border-slate-700 p-7 rounded-2xl w-[400px]">
-    <h2 class="text-lg font-bold mb-2" id="remarksTitle">Add Remarks</h2>
-    <p class="text-slate-400 text-sm mb-4" id="remarksLabel">Optional note for the visitor:</p>
-    <textarea id="remarksInput" rows="3" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm mb-4 focus:outline-none focus:border-indigo-500 resize-none" placeholder="Optional..."></textarea>
+<!-- ADD / EDIT SLOT MODAL -->
+<div id="slotModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50 backdrop-blur-sm">
+  <div class="bg-slate-900 border border-slate-700 p-7 rounded-2xl w-[420px] shadow-2xl max-h-[90vh] overflow-y-auto">
+    <h2 class="text-lg font-bold mb-5" id="slotModalTitle">Add Slot</h2>
+    <div class="mb-3">
+      <label class="text-xs text-slate-400 mb-1 block">Category</label>
+      <select id="sCategory" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500">
+        <option>Meeting</option><option>Brainstorming</option><option>Event Participation</option><option>Learnings</option><option>Others</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="text-xs text-slate-400 mb-1 block">Title *</label>
+      <input id="sTitle" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500" placeholder="Slot title"/>
+    </div>
+    <div class="mb-3">
+      <label class="text-xs text-slate-400 mb-1 block">Date *</label>
+      <input id="sDate" type="date" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div><label class="text-xs text-slate-400 mb-1 block">Start Time * (min 5:00 AM)</label>
+      <input id="sStart" type="time" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/></div>
+      <div><label class="text-xs text-slate-400 mb-1 block">End Time * (max 11:00 PM)</label>
+      <input id="sEnd" type="time" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/></div>
+    </div>
+    <div class="mb-3">
+      <label class="text-xs text-slate-400 mb-1 block">Status</label>
+      <select id="sStatus" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500">
+        <option value="upcoming">Upcoming (Open)</option>
+        <option value="cancelled">Blocked/Cancelled</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div class="mb-4">
+      <label class="text-xs text-slate-400 mb-1 block">Description (min 25 characters)</label>
+      <textarea id="sDesc" rows="2" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500 resize-none" placeholder="Description..." oninput="updateSlotCharCount()"></textarea>
+      <div id="slotCharCount" class="text-xs text-slate-500 mt-1">0 / 25 characters</div>
+    </div>
+    <p id="slotErr" class="text-red-400 text-xs mb-3 hidden"></p>
     <div class="flex gap-3">
-      <button onclick="closeRemarksModal()" class="flex-1 py-2 rounded-xl bg-slate-700 text-sm">Cancel</button>
-      <button onclick="confirmAction()" class="flex-1 py-2 rounded-xl bg-indigo-600 text-sm font-medium" id="confirmBtn">Confirm</button>
+      <button onclick="closeSlotModal()" class="flex-1 py-3 rounded-xl bg-slate-700 text-sm">Cancel</button>
+      <button onclick="saveSlot()" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-medium">Save Slot</button>
     </div>
   </div>
 </div>
 
-<!-- ══ TOAST ══ -->
+<!-- REMARKS MODAL -->
+<div id="rmkModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50 backdrop-blur-sm">
+  <div class="bg-slate-900 border border-slate-700 p-7 rounded-2xl w-96 shadow-2xl">
+    <h2 class="text-lg font-bold mb-2" id="rmkTitle">Add Note</h2>
+    <p class="text-slate-400 text-sm mb-4" id="rmkLabel">Optional note for visitor:</p>
+    <textarea id="rmkInput" rows="3" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm mb-4 focus:outline-none focus:border-indigo-500 resize-none" placeholder="Optional..."></textarea>
+    <div class="flex gap-3">
+      <button onclick="closeRmkModal()" class="flex-1 py-2 rounded-xl bg-slate-700 text-sm">Cancel</button>
+      <button onclick="confirmRmk()" class="flex-1 py-2 rounded-xl bg-indigo-600 text-sm font-medium">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
 <div id="toast" class="hidden fixed bottom-6 right-6 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium"></div>
 
 <script>
-let currentAction = null;
-let currentReqId = null;
-let currentReq = null;
-let allRequests = [];
-let filterMode = "pending";
-
-// ── INIT ───────────────────────────────────────────────────────────────────
-window.addEventListener("load", () => {
-  if (!sessionStorage.getItem("owner_auth")) {
-    window.location.href = "index.html";
-    return;
-  }
-  loadRequests();
-  loadScheduleStats();
-});
-
-function returnToVisitor() {
-  sessionStorage.removeItem("owner_auth");
-  window.location.href = "index.html";
-}
-
-function copyBookingLink() {
-  navigator.clipboard.writeText(window.location.origin + "/index.html").then(() => {
-    document.getElementById("copyBtn").textContent = "✓ Copied!";
-    setTimeout(() => document.getElementById("copyBtn").textContent = "📋 Copy Booking Link", 2000);
-  });
-}
-
-// ── HELPER ─────────────────────────────────────────────────────────────────
-function formatTime(t) {
-  if (!t) return "";
-  const [h, m] = t.split(":");
-  const hr = parseInt(h);
-  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"} IST`;
-}
-function pad(n) { return String(n).padStart(2, "0"); }
-
-// ── STATS ──────────────────────────────────────────────────────────────────
-async function loadScheduleStats() {
-  const { data } = await supabaseClient.from("schedules").select("status");
-  // (optional schedule stats — using requests for main stats)
-}
-
-async function updateStats() {
-  const t = allRequests.length;
-  const p = allRequests.filter(r => r.status === "pending").length;
-  const a = allRequests.filter(r => r.status === "accepted" || r.status === "accepted_with_remarks").length;
-  const d = allRequests.filter(r => r.status === "declined").length;
-  const c = allRequests.filter(r => r.status === "reschedule_requested").length;
-  document.getElementById("statTotal").textContent = t;
-  document.getElementById("statPending").textContent = p;
-  document.getElementById("statApproved").textContent = a;
-  document.getElementById("statRejected").textContent = d;
-  document.getElementById("statCancelled").textContent = c;
-}
-
-// ── REQUESTS ───────────────────────────────────────────────────────────────
-async function loadRequests() {
-  const { data } = await supabaseClient
-    .from("booking_requests").select("*")
-    .order("created_at", { ascending: false });
-  allRequests = data || [];
-  updateStats();
-  renderRequests();
-}
-
-function filterReqs(mode) {
-  filterMode = mode;
-  document.getElementById("ft-pend").className = `px-3 py-1 rounded-lg text-xs font-medium ${mode === "pending" ? "bg-indigo-600" : "bg-slate-700"}`;
-  document.getElementById("ft-all").className = `px-3 py-1 rounded-lg text-xs font-medium ${mode === "all" ? "bg-indigo-600" : "bg-slate-700"}`;
-  renderRequests();
-}
-
-function renderRequests() {
-  const el = document.getElementById("requestsList");
-  const list = filterMode === "pending" ? allRequests.filter(r => r.status === "pending") : allRequests;
-
-  if (!list.length) {
-    el.innerHTML = `<p class="text-slate-500 text-sm text-center py-8">${filterMode === "pending" ? "No pending requests" : "No requests found"}</p>`;
-    return;
-  }
-
-  const pendingList = allRequests.filter(r => r.status === "pending");
-
-  el.innerHTML = list.map(r => {
-    const isPending = r.status === "pending";
-    const hasConflict = isPending && pendingList.some(p =>
-      p.id !== r.id &&
-      p.requested_date === r.requested_date &&
-      p.start_time < r.end_time &&
-      p.end_time > r.start_time
-    );
-
-    return `
-      <div class="bg-slate-800 rounded-xl p-5 border ${hasConflict ? "border-yellow-600/40" : "border-slate-700"} transition hover:border-slate-600">
-        ${hasConflict ? `<div class="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-2 mb-3 text-xs text-yellow-400">⚠ Overlapping request exists for this time slot</div>` : ""}
-        <div class="flex justify-between items-start mb-2">
-          <h3 class="font-semibold text-lg">${r.visitor_name}</h3>
-          <span class="status-${r.status}">${r.status.replace(/_/g, " ")}</span>
-        </div>
-        <p class="text-slate-400 text-sm">📧 ${r.visitor_email}</p>
-        <p class="text-slate-400 text-sm">📅 ${r.requested_date} · ${formatTime(r.start_time)} – ${formatTime(r.end_time)}</p>
-        <p class="text-slate-300 text-sm mt-2 leading-relaxed">${r.description}</p>
-        ${r.owner_remarks ? `<p class="text-slate-500 text-xs mt-2 italic">Note: ${r.owner_remarks}</p>` : ""}
-        ${isPending ? `
-          <div class="flex flex-wrap gap-2 mt-4">
-            <button onclick="quickAction('${r.id}', 'accept')" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-medium transition">✓ Approve</button>
-            <button onclick="openRemarks('${r.id}', 'accept_remarks')" class="px-4 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-sm font-medium transition">Approve + Note</button>
-            <button onclick="openRemarks('${r.id}', 'reschedule')" class="px-4 py-2 rounded-lg bg-yellow-700 hover:bg-yellow-600 text-sm font-medium transition">Reschedule</button>
-            <button onclick="openRemarks('${r.id}', 'decline')" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-sm font-medium transition">✕ Reject</button>
-          </div>` : ""}
-      </div>`;
-  }).join("");
-}
-
-// ── ACTIONS ────────────────────────────────────────────────────────────────
-async function quickAction(id, action) {
-  currentReq = allRequests.find(r => r.id === id);
-  if (!currentReq) return;
-  if (action === "accept") {
-    if (!confirm("Approve this booking request?")) return;
-    await processAction(id, "accept", "");
-  }
-}
-
-function openRemarks(id, action) {
-  currentAction = action;
-  currentReqId = id;
-  currentReq = allRequests.find(r => r.id === id);
-  const titles = { accept_remarks: "Approve with Note", reschedule: "Request Reschedule", decline: "Reject Request" };
-  const labels = { accept_remarks: "Add a note for the visitor:", reschedule: "Suggest a new time or explain:", decline: "Reason for rejection (optional):" };
-  document.getElementById("remarksTitle").textContent = titles[action];
-  document.getElementById("remarksLabel").textContent = labels[action];
-  document.getElementById("remarksInput").value = "";
-  document.getElementById("remarksModal").classList.remove("hidden");
-}
-
-function closeRemarksModal() {
-  document.getElementById("remarksModal").classList.add("hidden");
-}
-
-async function confirmAction() {
-  const remarks = document.getElementById("remarksInput").value.trim();
-  closeRemarksModal();
-  await processAction(currentReqId, currentAction, remarks);
-}
-
-async function processAction(id, action, remarks) {
-  const req = allRequests.find(r => r.id === id);
-  if (!req) return;
-
-  if (action === "accept" || action === "accept_remarks") {
-    // Check overlap before accepting
-    const { data: ov } = await supabaseClient
-      .from("schedules").select("id")
-      .eq("date", req.requested_date).neq("status", "cancelled")
-      .lt("start_time", req.end_time).gt("end_time", req.start_time);
-
-    if (ov && ov.length) {
-      showToast("⚠ This time slot is already booked!", "red");
-      return;
-    }
-
-    // Create schedule entry
-    await supabaseClient.from("schedules").insert([{
-      category: "Meeting",
-      title: `Meeting with ${req.visitor_name}`,
-      date: req.requested_date,
-      start_time: req.start_time,
-      end_time: req.end_time,
-      description: req.description,
-      status: "upcoming",
-      created_by: "visitor",
-      visitor_name: req.visitor_name,
-      visitor_email: req.visitor_email
-    }]);
-
-    // Update request status
-    await supabaseClient.from("booking_requests").update({
-      status: remarks ? "accepted_with_remarks" : "accepted",
-      owner_remarks: remarks || null,
-      updated_at: new Date().toISOString()
-    }).eq("id", id);
-
-    // Send approval email
-    await sendEmail(req, "approved", remarks);
-    showToast("✓ Booking approved and email sent!", "green");
-
-  } else if (action === "reschedule") {
-    await supabaseClient.from("booking_requests").update({
-      status: "reschedule_requested",
-      owner_remarks: remarks,
-      updated_at: new Date().toISOString()
-    }).eq("id", id);
-    await sendEmail(req, "reschedule", remarks);
-    showToast("✓ Reschedule request sent!", "yellow");
-
-  } else if (action === "decline") {
-    await supabaseClient.from("booking_requests").update({
-      status: "declined",
-      owner_remarks: remarks || null,
-      updated_at: new Date().toISOString()
-    }).eq("id", id);
-    await sendEmail(req, "rejected", remarks);
-    showToast("✓ Request rejected and email sent!", "red");
-  }
-
-  await loadRequests();
-}
-
-// ── EMAIL SYSTEM ───────────────────────────────────────────────────────────
-// Uses EmailJS (free, no backend needed — 200 emails/month free)
-// SETUP: Go to emailjs.com, create account, get Service ID + Template ID + Public Key
-// Then replace the values below
-
-// ── EmailJS Configuration ──────────────────────────────────────────────────
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const OWNER_EMAIL        = "mannamvyshnavi795@gmail.com";
 const EMAILJS_SERVICE_ID  = "service_yoopnyg";
 const EMAILJS_TEMPLATE_ID = "template_anwow39";
 const EMAILJS_PUBLIC_KEY  = "7PtWUw7mxp1fRlLb6";
 
-async function sendEmail(req, type, remarks = "") {
-  const subjects = {
-    approved:   "✓ Your Meeting Has Been Approved — MyScheduler",
-    rejected:   "Your Meeting Request Has Been Declined — MyScheduler",
-    reschedule: "Reschedule Requested — MyScheduler"
+// ── STATE ──────────────────────────────────────────────────────────────────
+let oCalY, oCalM, oSelDate = null;
+let oEvDates = new Set();
+let allReqs = [], reqFilter = "pending";
+let editSlotId = null;
+let rmkAction = null, rmkReqId = null, rmkReq = null;
+let chVisible = false;
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  if (!sessionStorage.getItem("owner_auth")) { window.location.href = "index.html"; return; }
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+  const now = getIST();
+  oCalY = now.getFullYear(); oCalM = now.getMonth();
+  oSelDate = fmtDate(now);
+  renderOCal(); loadOSlots(); loadOEvDates();
+  loadRequests(); loadStats();
+
+  supabaseClient.channel("owner-rt")
+    .on("postgres_changes",{event:"*",schema:"public",table:"schedules"},()=>{ loadOSlots(); loadOEvDates(); loadStats(); })
+    .on("postgres_changes",{event:"*",schema:"public",table:"booking_requests"},()=>{ loadRequests(); })
+    .subscribe();
+});
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function getIST(){ return new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Kolkata"})); }
+function fmtDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function pad(n){ return String(n).padStart(2,"0"); }
+function fmtTime(t){
+  if(!t) return "";
+  const[h,m]=t.split(":");const hr=parseInt(h);
+  return `${hr%12||12}:${m} ${hr>=12?"PM":"AM"} IST`;
+}
+function showToast(msg,color="green"){
+  const t=document.getElementById("toast");
+  t.className=`fixed bottom-6 right-6 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium bg-${color}-600`;
+  t.textContent=msg; t.classList.remove("hidden");
+  setTimeout(()=>t.classList.add("hidden"),4000);
+}
+function returnToVisitor(){ sessionStorage.removeItem("owner_auth"); window.location.href="index.html"; }
+function copyLink(){
+  navigator.clipboard.writeText(window.location.origin+"/index.html").then(()=>{
+    document.getElementById("copyBtn").textContent="✓ Copied!";
+    setTimeout(()=>document.getElementById("copyBtn").textContent="📋 Copy Booking Link",2000);
+  });
+}
+function showTab(t){
+  document.getElementById("scheduleTab").classList.toggle("hidden",t!=="schedule");
+  document.getElementById("requestsTab").classList.toggle("hidden",t!=="requests");
+  document.getElementById("tab-schedule").className=`px-5 py-2 rounded-xl text-sm font-medium ${t==="schedule"?"bg-indigo-600":"bg-slate-700 hover:bg-slate-600"}`;
+  document.getElementById("tab-requests").className=`px-5 py-2 rounded-xl text-sm font-medium ${t==="requests"?"bg-indigo-600":"bg-slate-700 hover:bg-slate-600"}`;
+  if(t==="requests") loadRequests();
+}
+
+// ── OWNER CALENDAR (ALL dates accessible) ─────────────────────────────────
+async function loadOEvDates(){
+  const{data}=await supabaseClient.from("schedules").select("date").neq("status","cancelled");
+  oEvDates=new Set(data?.map(r=>r.date)||[]);
+  renderOCal();
+}
+function renderOCal(){
+  document.getElementById("oCalLabel").textContent=
+    new Date(oCalY,oCalM,1).toLocaleString("en-US",{month:"long",year:"numeric"});
+  const grid=document.getElementById("oCalGrid"); grid.innerHTML="";
+  const first=new Date(oCalY,oCalM,1).getDay(),total=new Date(oCalY,oCalM+1,0).getDate(),today=fmtDate(getIST());
+  for(let i=0;i<first;i++){const e=document.createElement("div");e.className="cal-day empty";grid.appendChild(e);}
+  for(let d=1;d<=total;d++){
+    const ds=`${oCalY}-${pad(oCalM+1)}-${pad(d)}`;
+    const el=document.createElement("div"); el.className="cal-day"; el.textContent=d;
+    if(ds<today) el.classList.add("past-owner"); // OWNERS: past dates styled but still clickable
+    if(ds===today) el.classList.add("today");
+    if(ds===oSelDate) el.classList.add("selected");
+    if(oEvDates.has(ds)) el.classList.add("has-event");
+    el.onclick=()=>oSelectDate(ds);
+    grid.appendChild(el);
+  }
+}
+function oCalPrev(){ oCalM--; if(oCalM<0){oCalM=11;oCalY--;} renderOCal(); }
+function oCalNext(){ oCalM++; if(oCalM>11){oCalM=0;oCalY++;} renderOCal(); }
+function oSelectDate(ds){
+  oSelDate=ds; renderOCal();
+  const[y,m,d]=ds.split("-");
+  document.getElementById("oDayLabel").textContent=
+    new Date(y,m-1,d).toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  loadOSlots();
+}
+
+// ── OWNER SLOTS ────────────────────────────────────────────────────────────
+async function loadOSlots(){
+  if(!oSelDate) return;
+  const{data}=await supabaseClient.from("schedules").select("*").eq("date",oSelDate).order("start_time");
+  const el=document.getElementById("oSlots");
+  if(!data||!data.length){
+    el.innerHTML='<p class="text-slate-500 text-sm text-center py-4">No slots for this date</p>'; return;
+  }
+  el.innerHTML=data.map(s=>`
+    <div class="slot-card ${s.status}">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <span class="text-xs font-semibold px-2 py-1 rounded-full bg-indigo-900/50 text-indigo-300 mr-2">${s.category}</span>
+          <span class="text-sm font-semibold">${s.title}</span>
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full ${
+          s.status==="upcoming"?"bg-blue-900/40 text-blue-300":
+          s.status==="completed"?"bg-green-900/40 text-green-300":
+          s.status==="cancelled"?"bg-red-900/40 text-red-300":"bg-yellow-900/40 text-yellow-300"
+        }">${s.status}</span>
+      </div>
+      <p class="text-xs text-slate-400 mb-1">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}</p>
+      ${s.visitor_name?`<p class="text-xs text-slate-500">Visitor: ${s.visitor_name}</p>`:""}
+      <div class="flex gap-2 mt-3 flex-wrap">
+        ${s.status!=="completed"&&s.status!=="cancelled"?`
+          <button onclick="completeSlot('${s.id}')" class="px-3 py-1 rounded-lg bg-green-700 hover:bg-green-600 text-xs transition">✓ Complete</button>
+          <button onclick="editSlot(${JSON.stringify(s).replace(/"/g,"&quot;")})" class="px-3 py-1 rounded-lg bg-slate-600 hover:bg-slate-500 text-xs transition">✎ Edit</button>
+          <button onclick="cancelSlot('${s.id}')" class="px-3 py-1 rounded-lg bg-red-700 hover:bg-red-600 text-xs transition">✕ Cancel</button>
+        `:`
+          ${s.status==="cancelled"?`<button onclick="reopenSlot('${s.id}')" class="px-3 py-1 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-xs transition">↩ Reopen</button>`:""}
+          <button onclick="deleteSlot('${s.id}')" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs transition">🗑 Delete</button>
+        `}
+      </div>
+    </div>`).join("");
+}
+
+// Slot actions
+async function completeSlot(id){
+  await supabaseClient.from("schedules").update({status:"completed",updated_at:new Date().toISOString()}).eq("id",id);
+  loadOSlots(); loadStats(); showToast("✓ Slot marked complete!","green");
+}
+async function cancelSlot(id){
+  if(!confirm("Cancel this slot? Visitors will see it as unavailable.")) return;
+  await supabaseClient.from("schedules").update({status:"cancelled",updated_at:new Date().toISOString()}).eq("id",id);
+  loadOSlots(); loadOEvDates(); loadStats(); showToast("Slot cancelled.","red");
+}
+async function reopenSlot(id){
+  await supabaseClient.from("schedules").update({status:"upcoming",updated_at:new Date().toISOString()}).eq("id",id);
+  loadOSlots(); loadOEvDates(); showToast("Slot reopened!","green");
+}
+async function deleteSlot(id){
+  if(!confirm("Permanently delete this slot?")) return;
+  await supabaseClient.from("schedules").delete().eq("id",id);
+  loadOSlots(); loadOEvDates(); loadStats(); showToast("Slot deleted.","red");
+}
+function editSlot(s){
+  editSlotId=s.id;
+  document.getElementById("slotModalTitle").textContent="Edit Slot";
+  document.getElementById("sCategory").value=s.category;
+  document.getElementById("sTitle").value=s.title;
+  document.getElementById("sDate").value=s.date;
+  document.getElementById("sStart").value=(s.start_time||"").slice(0,5);
+  document.getElementById("sEnd").value=(s.end_time||"").slice(0,5);
+  document.getElementById("sStatus").value=s.status;
+  document.getElementById("sDesc").value=s.description||"";
+  document.getElementById("slotCharCount").textContent=`${(s.description||"").length} / 25 characters`;
+  document.getElementById("slotErr").classList.add("hidden");
+  document.getElementById("slotModal").classList.remove("hidden");
+}
+
+// Add slot modal
+function openAddSlot(){
+  editSlotId=null;
+  document.getElementById("slotModalTitle").textContent="Add Slot";
+  document.getElementById("sCategory").value="Meeting";
+  document.getElementById("sTitle").value="";
+  document.getElementById("sDate").value=oSelDate||fmtDate(getIST());
+  document.getElementById("sStart").value="";
+  document.getElementById("sEnd").value="";
+  document.getElementById("sStatus").value="upcoming";
+  document.getElementById("sDesc").value="";
+  document.getElementById("slotCharCount").textContent="0 / 25 characters";
+  document.getElementById("slotErr").classList.add("hidden");
+  document.getElementById("slotModal").classList.remove("hidden");
+}
+function closeSlotModal(){ document.getElementById("slotModal").classList.add("hidden"); }
+function updateSlotCharCount(){
+  const n=document.getElementById("sDesc").value.length;
+  const el=document.getElementById("slotCharCount");
+  el.textContent=`${n} / 25 characters`;
+  el.className=n>=25?"text-xs text-green-400 mt-1":"text-xs text-slate-500 mt-1";
+}
+
+async function saveSlot(){
+  const cat=document.getElementById("sCategory").value;
+  const title=document.getElementById("sTitle").value.trim();
+  const date=document.getElementById("sDate").value;
+  const start=document.getElementById("sStart").value;
+  const end=document.getElementById("sEnd").value;
+  const status=document.getElementById("sStatus").value;
+  const desc=document.getElementById("sDesc").value.trim();
+  const errEl=document.getElementById("slotErr");
+  errEl.classList.add("hidden");
+
+  if(!title||!date||!start||!end){errEl.textContent="Title, date, start and end time are required";errEl.classList.remove("hidden");return;}
+  if(end<=start){errEl.textContent="End time must be after start time";errEl.classList.remove("hidden");return;}
+  if(start<"05:00"){errEl.textContent="Start time must be 5:00 AM or later";errEl.classList.remove("hidden");return;}
+  if(end>"23:00"){errEl.textContent="End time must be 11:00 PM or earlier";errEl.classList.remove("hidden");return;}
+  if(desc.length>0&&desc.length<25){errEl.textContent="Description must be at least 25 characters (or leave empty)";errEl.classList.remove("hidden");return;}
+
+  // Overlap check (exclude self when editing)
+  let ovQ=supabaseClient.from("schedules").select("id").eq("date",date).neq("status","cancelled").lt("start_time",end).gt("end_time",start);
+  if(editSlotId) ovQ=ovQ.neq("id",editSlotId);
+  const{data:ov}=await ovQ;
+  if(ov&&ov.length){errEl.textContent="This time overlaps with an existing slot!";errEl.classList.remove("hidden");return;}
+
+  const payload={category:cat,title,date,start_time:start,end_time:end,status,description:desc||null,updated_at:new Date().toISOString()};
+
+  if(editSlotId){
+    await supabaseClient.from("schedules").update(payload).eq("id",editSlotId);
+    showToast("✓ Slot updated!","green");
+  } else {
+    await supabaseClient.from("schedules").insert([{...payload,created_by:"owner"}]);
+    showToast("✓ Slot added!","green");
+  }
+
+  closeSlotModal();
+  if(oSelDate===date) loadOSlots();
+  loadOEvDates(); loadStats();
+}
+
+// ── ALL-TIME STATS ─────────────────────────────────────────────────────────
+async function loadStats(){
+  const{data:s}=await supabaseClient.from("schedules").select("status");
+  document.getElementById("sDone").textContent=s?.filter(r=>r.status==="completed").length||0;
+  document.getElementById("sRs").textContent=s?.filter(r=>r.status==="rescheduled").length||0;
+  document.getElementById("sCx").textContent=s?.filter(r=>r.status==="cancelled").length||0;
+}
+
+// ── CANCEL HISTORY ─────────────────────────────────────────────────────────
+async function toggleCH(){
+  chVisible=!chVisible;
+  const el=document.getElementById("chList");
+  el.classList.toggle("hidden",!chVisible);
+  if(!chVisible) return;
+  const{data}=await supabaseClient.from("schedules").select("*").eq("status","cancelled").order("updated_at",{ascending:false});
+  el.innerHTML=data?.length?data.map(s=>`
+    <div class="bg-slate-800 rounded-xl p-3 border-l-2 border-red-500">
+      <p class="text-sm font-medium">${s.title}</p>
+      <p class="text-xs text-slate-400">${s.date} · ${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}</p>
+    </div>`).join(""):"<p class='text-slate-500 text-xs'>No cancellations</p>";
+}
+
+// ── REQUESTS ───────────────────────────────────────────────────────────────
+async function loadRequests(){
+  const{data}=await supabaseClient.from("booking_requests").select("*").order("created_at",{ascending:false});
+  allReqs=data||[];
+  // Update stats
+  document.getElementById("stTotal").textContent=allReqs.length;
+  document.getElementById("stPend").textContent=allReqs.filter(r=>r.status==="pending").length;
+  document.getElementById("stAcc").textContent=allReqs.filter(r=>r.status==="accepted"||r.status==="accepted_with_remarks").length;
+  document.getElementById("stRej").textContent=allReqs.filter(r=>r.status==="declined").length;
+  document.getElementById("stCan").textContent=allReqs.filter(r=>r.status==="reschedule_requested").length;
+  document.getElementById("pendBadge").textContent=allReqs.filter(r=>r.status==="pending").length;
+  renderReqs();
+}
+
+function filterReqs(f){
+  reqFilter=f;
+  document.getElementById("ft-p").className=`px-4 py-2 rounded-xl text-sm font-medium ${f==="pending"?"bg-indigo-600":"bg-slate-700 hover:bg-slate-600"}`;
+  document.getElementById("ft-a").className=`px-4 py-2 rounded-xl text-sm font-medium ${f==="all"?"bg-indigo-600":"bg-slate-700 hover:bg-slate-600"}`;
+  renderReqs();
+}
+
+function renderReqs(){
+  const el=document.getElementById("reqsList");
+  const list=reqFilter==="pending"?allReqs.filter(r=>r.status==="pending"):allReqs;
+  if(!list.length){el.innerHTML=`<p class="text-slate-500 text-sm">${reqFilter==="pending"?"No pending requests":"No requests found"}</p>`;return;}
+  const pend=allReqs.filter(r=>r.status==="pending");
+  el.innerHTML=list.map(r=>{
+    const ip=r.status==="pending";
+    const conf=ip&&pend.some(p=>p.id!==r.id&&p.requested_date===r.requested_date&&p.start_time<r.end_time&&p.end_time>r.start_time);
+    return `<div class="card ${conf?"border-yellow-600/40":""}">
+      ${conf?`<div class="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-2 mb-3 text-xs text-yellow-400">⚠ Overlapping request exists for this time slot</div>`:""}
+      <div class="flex justify-between items-start mb-2">
+        <h3 class="font-semibold text-lg">${r.visitor_name}</h3>
+        <span class="status-${r.status}">${r.status.replace(/_/g," ")}</span>
+      </div>
+      <p class="text-slate-400 text-sm">📧 ${r.visitor_email}</p>
+      <p class="text-slate-400 text-sm">📅 <strong>${r.requested_date}</strong> · ${fmtTime(r.start_time)} – ${fmtTime(r.end_time)}</p>
+      <p class="text-slate-300 text-sm mt-2 leading-relaxed">${r.description}</p>
+      ${r.owner_remarks?`<p class="text-slate-500 text-xs mt-2 italic">Note: ${r.owner_remarks}</p>`:""}
+      ${ip?`<div class="flex flex-wrap gap-2 mt-4">
+        <button onclick="doReqAction('${r.id}','accept')" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-medium transition">✓ Approve</button>
+        <button onclick="openRmk('${r.id}','accept_remarks')" class="px-4 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-sm font-medium transition">Approve + Note</button>
+        <button onclick="openRmk('${r.id}','reschedule')" class="px-4 py-2 rounded-lg bg-yellow-700 hover:bg-yellow-600 text-sm font-medium transition">Reschedule</button>
+        <button onclick="openRmk('${r.id}','decline')" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-sm font-medium transition">✕ Reject</button>
+      </div>`:""}
+    </div>`;
+  }).join("");
+}
+
+// ── REQUEST ACTIONS ────────────────────────────────────────────────────────
+async function doReqAction(id,action,remarks=""){
+  const req=allReqs.find(r=>r.id===id); if(!req) return;
+
+  if(action==="accept"||action==="accept_remarks"){
+    // Overlap check
+    const{data:ov}=await supabaseClient.from("schedules").select("id")
+      .eq("date",req.requested_date).neq("status","cancelled")
+      .lt("start_time",req.end_time).gt("end_time",req.start_time);
+    if(ov&&ov.length){showToast("⚠ Time slot already booked!","red");return;}
+
+    // Create schedule entry
+    await supabaseClient.from("schedules").insert([{
+      category:"Meeting",title:`Meeting with ${req.visitor_name}`,
+      date:req.requested_date,start_time:req.start_time,end_time:req.end_time,
+      description:req.description,status:"upcoming",created_by:"visitor",
+      visitor_name:req.visitor_name,visitor_email:req.visitor_email
+    }]);
+    await supabaseClient.from("booking_requests").update({
+      status:remarks?"accepted_with_remarks":"accepted",
+      owner_remarks:remarks||null,updated_at:new Date().toISOString()
+    }).eq("id",id);
+
+    // Email to VISITOR — approval with full details
+    await sendEmailTo(req.visitor_email,req.visitor_name,"approved",req,remarks);
+    // Email to OWNER — confirmation
+    await sendEmailTo(OWNER_EMAIL,"Owner","owner_approved",req,remarks);
+    showToast("✓ Approved! Emails sent to visitor and owner.","green");
+
+  } else if(action==="reschedule"){
+    await supabaseClient.from("booking_requests").update({
+      status:"reschedule_requested",owner_remarks:remarks,updated_at:new Date().toISOString()
+    }).eq("id",id);
+    await sendEmailTo(req.visitor_email,req.visitor_name,"reschedule",req,remarks);
+    showToast("Reschedule request sent!","yellow");
+
+  } else if(action==="decline"){
+    await supabaseClient.from("booking_requests").update({
+      status:"declined",owner_remarks:remarks||null,updated_at:new Date().toISOString()
+    }).eq("id",id);
+    await sendEmailTo(req.visitor_email,req.visitor_name,"rejected",req,remarks);
+    showToast("Request rejected. Email sent to visitor.","red");
+  }
+
+  loadRequests(); loadOEvDates(); loadOSlots(); loadStats();
+}
+
+function openRmk(id,action){
+  rmkAction=action; rmkReqId=id; rmkReq=allReqs.find(r=>r.id===id);
+  const titles={accept_remarks:"Approve with Note",reschedule:"Request Reschedule",decline:"Reject Request"};
+  const labels={accept_remarks:"Add a note for the visitor:",reschedule:"Suggest a new time or explain:",decline:"Reason for rejection (optional):"};
+  document.getElementById("rmkTitle").textContent=titles[action];
+  document.getElementById("rmkLabel").textContent=labels[action];
+  document.getElementById("rmkInput").value="";
+  document.getElementById("rmkModal").classList.remove("hidden");
+}
+function closeRmkModal(){ document.getElementById("rmkModal").classList.add("hidden"); }
+async function confirmRmk(){
+  const remarks=document.getElementById("rmkInput").value.trim();
+  closeRmkModal();
+  await doReqAction(rmkReqId,rmkAction,remarks);
+}
+
+// ── EMAIL SYSTEM ────────────────────────────────────────────────────────────
+async function sendEmailTo(toEmail, toName, type, req, remarks=""){
+  const configs = {
+    approved: {
+      subject: "✓ Your Meeting Has Been Approved — MyScheduler",
+      message: `Great news, ${req.visitor_name}!\n\nYour meeting request has been APPROVED.\n\nMeeting Details:\nDate: ${req.requested_date}\nStart: ${fmtTime(req.start_time)}\nEnd: ${fmtTime(req.end_time)}\n${remarks?"Owner's Note: "+remarks+"\n":""}\nPlease be prepared at the scheduled time.\n\nThank you!`,
+      status: "✓ APPROVED"
+    },
+    rejected: {
+      subject: "Your Meeting Request Has Been Declined — MyScheduler",
+      message: `Hi ${req.visitor_name},\n\nUnfortunately, your meeting request for ${req.requested_date} (${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}) has been declined.\n\n${remarks?"Reason: "+remarks+"\n":""}\nPlease feel free to submit a new request for a different time.\n\nThank you!`,
+      status: "✕ DECLINED"
+    },
+    reschedule: {
+      subject: "Reschedule Requested — MyScheduler",
+      message: `Hi ${req.visitor_name},\n\nThe owner has requested to reschedule your meeting originally planned for ${req.requested_date} (${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}).\n\nMessage from owner: ${remarks||"Please suggest a new time."}\n\nPlease visit MyScheduler to book a new slot.\n\nThank you!`,
+      status: "⟳ RESCHEDULE REQUESTED"
+    },
+    owner_approved: {
+      subject: `Meeting Approved: ${req.visitor_name} on ${req.requested_date}`,
+      message: `You approved a meeting request.\n\nVisitor: ${req.visitor_name}\nEmail: ${req.visitor_email}\nDate: ${req.requested_date}\nTime: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\nPurpose: ${req.description}\n${remarks?"Your note: "+remarks:""}`,
+      status: "✓ CONFIRMED"
+    }
   };
 
-  const messages = {
-    approved:   `Great news! Your meeting on ${req.requested_date} from ${formatTime(req.start_time)} to ${formatTime(req.end_time)} has been APPROVED.${remarks ? "\n\nNote from owner: " + remarks : ""}`,
-    rejected:   `Your meeting request for ${req.requested_date} (${formatTime(req.start_time)} – ${formatTime(req.end_time)}) has been declined.${remarks ? "\n\nReason: " + remarks : ""}`,
-    reschedule: `The owner has requested to reschedule your meeting on ${req.requested_date}.\n\nMessage: ${remarks || "Please suggest a new time."}`
-  };
+  const cfg = configs[type];
+  if (!cfg) return;
 
   try {
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     req.visitor_email,
-      to_name:      req.visitor_name,
-      subject:      subjects[type],
-      message:      messages[type],
+      to_email:     toEmail,
+      to_name:      toName,
+      subject:      cfg.subject,
+      message:      cfg.message,
       meeting_date: req.requested_date,
-      start_time:   formatTime(req.start_time),
-      end_time:     formatTime(req.end_time),
-      status:       type === "approved" ? "✓ APPROVED" : type === "rejected" ? "✕ REJECTED" : "⟳ RESCHEDULE REQUESTED",
-      remarks:      remarks || "None"
+      start_time:   fmtTime(req.start_time),
+      end_time:     fmtTime(req.end_time),
+      status:       cfg.status,
+      remarks:      remarks||"None"
     });
-
-    console.log("✅ Email sent to", req.visitor_email);
+    console.log(`✅ Email sent (${type}) to:`, toEmail);
   } catch(e) {
-    console.error("❌ Email failed:", e);
-    // Still show success — status is updated in Supabase
+    console.warn(`❌ Email failed (${type}):`, e);
   }
 }
 
 // ── OWNER AI CHAT ──────────────────────────────────────────────────────────
-async function sendOwnerChat() {
-  const inp = document.getElementById("oChatInput");
-  const msg = inp.value.trim();
-  if (!msg) return;
-  inp.value = "";
+async function oSendChat(){
+  const inp=document.getElementById("oChatIn");
+  const msg=inp.value.trim(); if(!msg) return;
+  inp.value=""; inp.disabled=true;
 
-  appendOwnerChat(msg, "user");
-  ownerChatHistory.push({ role: "user", text: msg });
+  oAppendMsg(msg,"user");
+  ownerChatHistory.push({role:"user",text:msg});
 
-  // Loading
-  const loadId = "load_" + Date.now();
-  document.getElementById("oChatBox").innerHTML +=
-    `<div id="${loadId}" class="msg-ai text-slate-400 italic">⋯ thinking...</div>`;
-  document.getElementById("oChatBox").scrollTop = document.getElementById("oChatBox").scrollHeight;
+  const loadDiv=document.createElement("div");
+  loadDiv.className="msg-ai text-slate-400 italic"; loadDiv.id="oLoading";
+  loadDiv.textContent="⋯ thinking...";
+  document.getElementById("oChatBox").appendChild(loadDiv);
+  document.getElementById("oChatBox").scrollTop=document.getElementById("oChatBox").scrollHeight;
 
-  // Get schedule context
-  const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-  const { data: sched } = await supabaseClient
-    .from("schedules").select("*")
-    .gte("date", todayStr).order("date").order("start_time").limit(20);
-  const { data: reqs } = await supabaseClient
-    .from("booking_requests").select("*").eq("status", "pending");
+  // Fetch schedule context
+  const today=fmtDate(getIST());
+  const{data:sched}=await supabaseClient.from("schedules").select("*").gte("date",today).order("date").order("start_time").limit(20);
+  const{data:reqs}=await supabaseClient.from("booking_requests").select("*").eq("status","pending");
+  const schedText=sched?.length?sched.map(s=>`[${s.date} ${(s.start_time||"").slice(0,5)}-${(s.end_time||"").slice(0,5)}] ${s.title} | ${s.category} | ${s.status}`).join("\n"):"No upcoming events";
+  const reqText=reqs?.length?reqs.map(r=>`${r.visitor_name} (${r.visitor_email}): ${r.requested_date} ${(r.start_time||"").slice(0,5)}-${(r.end_time||"").slice(0,5)}`).join("\n"):"None";
 
-  const schedText = sched?.length
-    ? sched.map(s => `[${s.date} ${s.start_time?.slice(0,5)}-${s.end_time?.slice(0,5)}] ${s.title} (${s.status})`).join("\n")
-    : "No upcoming events";
-  const reqText = reqs?.length
-    ? reqs.map(r => `${r.visitor_name} (${r.visitor_email}): ${r.requested_date} ${r.start_time?.slice(0,5)}-${r.end_time?.slice(0,5)}`).join("\n")
-    : "No pending requests";
-
-  const reply = await askOwnerAI(msg, schedText, reqText);
-
-  const loadEl = document.getElementById(loadId);
-  if (loadEl) loadEl.remove();
-  appendOwnerChat(reply, "ai");
-  ownerChatHistory.push({ role: "assistant", text: reply });
-  await saveChatMessage(msg, "user", "owner");
-  await saveChatMessage(reply, "assistant", "owner");
+  try{
+    const reply=await askOwnerAI(msg,schedText,reqText);
+    document.getElementById("oLoading")?.remove();
+    oAppendMsg(reply,"ai");
+    ownerChatHistory.push({role:"assistant",text:reply});
+    await saveChatMessage(msg,"user","owner");
+    await saveChatMessage(reply,"assistant","owner");
+  }catch(e){
+    document.getElementById("oLoading")?.remove();
+    oAppendMsg("Sorry, AI is temporarily unavailable. Please use the dashboard controls directly.","ai");
+  }
+  inp.disabled=false; inp.focus();
 }
 
-function appendOwnerChat(text, role) {
-  const box = document.getElementById("oChatBox");
-  const div = document.createElement("div");
-  div.className = role === "user" ? "msg-user" : "msg-ai";
-  div.innerHTML = String(text).replace(/\n/g, "<br>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
+function oAppendMsg(text,role){
+  const box=document.getElementById("oChatBox");
+  const div=document.createElement("div");
+  div.className=role==="user"?"msg-user":"msg-ai";
+  div.innerHTML=String(text).replace(/\n/g,"<br>").replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>");
+  box.appendChild(div); box.scrollTop=box.scrollHeight;
 }
-
-// ── TOAST ──────────────────────────────────────────────────────────────────
-function showToast(msg, color = "green") {
-  const t = document.getElementById("toast");
-  const colors = { green: "bg-green-600", red: "bg-red-600", yellow: "bg-yellow-600" };
-  t.className = `fixed bottom-6 right-6 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium ${colors[color] || "bg-green-600"}`;
-  t.textContent = msg;
-  setTimeout(() => t.classList.add("hidden"), 4000);
-}
-
-// ── REALTIME ───────────────────────────────────────────────────────────────
-supabaseClient.channel("owner-rt")
-  .on("postgres_changes", { event: "*", schema: "public", table: "booking_requests" }, () => {
-    loadRequests();
-  })
-  .on("postgres_changes", { event: "*", schema: "public", table: "schedules" }, () => {
-    loadRequests();
-  })
-  .subscribe();
 </script>
 </body>
 </html>

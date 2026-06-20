@@ -5,62 +5,55 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MyScheduler</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="supabase.js"></script>
 <script src="gemini.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body { background: #0f172a; color: white; }
-  .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-  .slot-avail { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 10px 14px; cursor: pointer; transition: all 0.2s; }
-  .slot-avail:hover { background: rgba(16,185,129,0.2); border-color: #10b981; }
-  .slot-booked { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 10px 14px; cursor: not-allowed; opacity: 0.6; }
-  .slot-pending { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 12px; padding: 10px 14px; cursor: not-allowed; opacity: 0.7; }
-  .msg-user { background: #4f46e5; border-radius: 16px 16px 4px 16px; padding: 10px 14px; margin-bottom: 8px; max-width: 85%; margin-left: auto; font-size: 0.875rem; }
-  .msg-ai { background: #1e293b; border: 1px solid #334155; border-radius: 16px 16px 16px 4px; padding: 10px 14px; margin-bottom: 8px; max-width: 85%; font-size: 0.875rem; line-height: 1.5; }
-  .cal-day { text-align: center; padding: 8px 4px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; color: #94a3b8; transition: all 0.15s; }
-  .cal-day:hover:not(.past):not(.empty) { background: rgba(99,102,241,0.2); color: white; }
-  .cal-day.today { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-weight: 700; }
-  .cal-day.selected { background: rgba(99,102,241,0.3); color: #818cf8; outline: 1px solid #6366f1; }
-  .cal-day.past { color: #334155; cursor: not-allowed; }
-  .cal-day.empty { cursor: default; }
-  .status-pending { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  .status-accepted { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  .status-declined { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  .status-reschedule_requested { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  .status-accepted_with_remarks { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
-  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
-  input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
-  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+body{background:#0f172a;color:white}
+.card{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.slot-avail{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:10px 14px;cursor:pointer;transition:all .2s}
+.slot-avail:hover{background:rgba(16,185,129,.2);border-color:#10b981;transform:translateX(3px)}
+.slot-booked{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;cursor:not-allowed;opacity:.55}
+.slot-pending{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 14px;cursor:not-allowed;opacity:.65}
+.msg-user{background:#4f46e5;border-radius:16px 16px 4px 16px;padding:10px 14px;margin-bottom:8px;max-width:85%;margin-left:auto;font-size:.875rem;word-break:break-word}
+.msg-ai{background:#1e293b;border:1px solid #334155;border-radius:16px 16px 16px 4px;padding:10px 14px;margin-bottom:8px;max-width:85%;font-size:.875rem;line-height:1.6;word-break:break-word}
+.cal-day{text-align:center;padding:7px 2px;border-radius:8px;cursor:pointer;font-size:.82rem;color:#94a3b8;transition:all .15s;position:relative}
+.cal-day:hover:not(.past):not(.empty){background:rgba(99,102,241,.2);color:white}
+.cal-day.today{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700}
+.cal-day.selected{background:rgba(99,102,241,.3);color:#818cf8;outline:1px solid #6366f1}
+.cal-day.past{color:#334155;cursor:not-allowed}
+.cal-day.empty{cursor:default}
+.cal-day.has-event::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:#10b981;border-radius:50%}
+.status-pending{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
+.status-accepted,.status-accepted_with_remarks{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
+.status-declined{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
+.status-reschedule_requested{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:4px}
 </style>
 </head>
 <body>
 
-<!-- ══ HEADER ══ -->
+<!-- HEADER -->
 <header class="flex justify-between items-center px-8 py-5 border-b border-slate-700 sticky top-0 bg-slate-900/95 backdrop-blur z-50">
-  <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-    MyScheduler
-  </h1>
-  <button id="ownerBtn" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition font-medium text-sm">
-    ⚙ Owner Dashboard
-  </button>
+  <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">MyScheduler</h1>
+  <button id="ownerBtn" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition font-medium text-sm">⚙ Owner Dashboard</button>
 </header>
 
-<!-- ══ VISITOR DASHBOARD ══ -->
-<div id="visitorDashboard" class="max-w-7xl mx-auto p-6">
-  <h2 class="text-2xl font-bold mb-6 text-slate-200">Request a Meeting with the Owner</h2>
-
+<!-- VISITOR DASHBOARD -->
+<div id="visitorDash" class="max-w-7xl mx-auto p-6">
+  <h2 class="text-xl font-bold mb-6 text-slate-200">Request a Meeting with the Owner</h2>
   <div class="grid lg:grid-cols-3 gap-6">
 
-    <!-- CARD 1: Calendar + Booking Form -->
+    <!-- Card 1: Calendar + Booking -->
     <div class="card">
-      <h3 class="text-lg font-semibold mb-4 text-slate-100">📅 Select a Date</h3>
-
-      <!-- Calendar -->
-      <div class="mb-5">
+      <h3 class="text-lg font-semibold mb-4">📅 Select a Date</h3>
+      <div class="mb-4">
         <div class="flex items-center justify-between mb-3">
-          <button onclick="calPrev()" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">‹</button>
-          <span id="calLabel" class="font-semibold text-sm"></span>
-          <button onclick="calNext()" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">›</button>
+          <button onclick="vCalPrev()" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">‹</button>
+          <span id="vCalLabel" class="font-semibold text-sm text-slate-200"></span>
+          <button onclick="vCalNext()" class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">›</button>
         </div>
         <div class="grid grid-cols-7 gap-1 mb-1">
           <div class="text-center text-xs text-slate-500 font-semibold py-1">Su</div>
@@ -71,35 +64,25 @@
           <div class="text-center text-xs text-slate-500 font-semibold py-1">Fr</div>
           <div class="text-center text-xs text-slate-500 font-semibold py-1">Sa</div>
         </div>
-        <div id="calGrid" class="grid grid-cols-7 gap-1"></div>
+        <div id="vCalGrid" class="grid grid-cols-7 gap-1"></div>
       </div>
 
       <!-- Booking Form -->
-      <div id="bookingForm" class="hidden">
-        <div class="border-t border-slate-700 pt-4 mb-3">
-          <p class="text-sm text-slate-400 mb-3">Booking for: <span id="formDate" class="text-indigo-400 font-semibold"></span></p>
-        </div>
+      <div id="bookingForm" class="hidden border-t border-slate-700 pt-4">
+        <p class="text-sm text-slate-400 mb-3">Booking for: <span id="formDateLabel" class="text-indigo-400 font-semibold"></span></p>
         <input id="bName" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Your Name *"/>
         <input id="bEmail" type="email" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Your Email *"/>
-        <input id="bPurpose" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Meeting Purpose (min 25 chars) *" oninput="checkCharCount()"/>
+        <textarea id="bPurpose" rows="2" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-1 text-sm focus:outline-none focus:border-indigo-500 resize-none" placeholder="Meeting Purpose * (min 25 characters)" oninput="updateCharCount()"></textarea>
         <div id="charCount" class="text-xs text-slate-500 mb-3">0 / 25 characters</div>
-        <div class="grid grid-cols-2 gap-3 mb-3">
-          <div>
-            <label class="text-xs text-slate-400 mb-1 block">Start Time *</label>
-            <input id="bStart" type="time" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/>
-          </div>
-          <div>
-            <label class="text-xs text-slate-400 mb-1 block">End Time *</label>
-            <input id="bEnd" type="time" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/>
-          </div>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div><label class="text-xs text-slate-400 mb-1 block">Start Time *</label>
+          <input id="bStart" type="time" class="w-full p-2 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/></div>
+          <div><label class="text-xs text-slate-400 mb-1 block">End Time *</label>
+          <input id="bEnd" type="time" class="w-full p-2 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500"/></div>
         </div>
-        <p id="formErr" class="text-red-400 text-xs mb-3 hidden"></p>
-        <button onclick="submitBooking()" class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 font-semibold text-sm hover:opacity-90 transition">
-          Submit Request
-        </button>
-        <button onclick="hideBookingForm()" class="w-full py-2 mt-2 rounded-xl bg-slate-700 text-sm text-slate-400 hover:bg-slate-600 transition">
-          Cancel
-        </button>
+        <p id="bookErr" class="text-red-400 text-xs mb-2 hidden"></p>
+        <button onclick="submitBooking()" class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 font-semibold text-sm hover:opacity-90 transition mb-2">Submit Request</button>
+        <button onclick="document.getElementById('bookingForm').classList.add('hidden')" class="w-full py-2 rounded-xl bg-slate-700 text-sm text-slate-400 hover:bg-slate-600 transition">Cancel</button>
       </div>
 
       <!-- Past Requests -->
@@ -107,383 +90,320 @@
         <h4 class="text-sm font-semibold text-slate-300 mb-3">📋 My Past Requests</h4>
         <input id="pastEmail" type="email" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-600 text-sm mb-2 focus:outline-none focus:border-indigo-500" placeholder="Enter your email"/>
         <button onclick="loadPastRequests()" class="w-full py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm transition">Search</button>
-        <div id="pastResults" class="mt-3 space-y-2"></div>
+        <div id="pastResults" class="mt-3 space-y-2 max-h-48 overflow-y-auto"></div>
       </div>
     </div>
 
-    <!-- CARD 2: Availability Slots -->
+    <!-- Card 2: Slots -->
     <div class="card">
-      <h3 class="text-lg font-semibold mb-4 text-slate-100">⏰ Available Slots</h3>
-      <p id="slotsLabel" class="text-sm text-slate-400 mb-4">Select a date to see available slots</p>
-      <div id="slotsContainer" class="space-y-2 max-h-[500px] overflow-y-auto pr-1"></div>
+      <h3 class="text-lg font-semibold mb-2">⏰ Available Slots</h3>
+      <p id="slotsDateLabel" class="text-sm text-slate-400 mb-4">Select a date to view slots</p>
+      <div id="slotsContainer" class="space-y-2 max-h-[520px] overflow-y-auto pr-1"></div>
     </div>
 
-    <!-- CARD 3: AI Chat -->
-    <div class="card flex flex-col" style="height: 580px;">
-      <h3 class="text-lg font-semibold mb-4 text-slate-100">🤖 AI Assistant</h3>
-      <div id="vChatBox" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1">
-        <div class="msg-ai">👋 Hi! I'm your scheduling assistant.<br><br>I can help you:<br>• Check availability on any date<br>• Book a meeting with the owner<br>• Answer scheduling questions<br><br>Select a date on the calendar to get started!</div>
+    <!-- Card 3: AI Chat -->
+    <div class="card flex flex-col" style="height:580px">
+      <h3 class="text-lg font-semibold mb-3">🤖 AI Assistant</h3>
+      <div id="vChatBox" class="flex-1 overflow-y-auto pr-1 mb-3">
+        <div class="msg-ai">👋 Hi! I'm your scheduling assistant.<br><br>I can help you:<br>• Check date availability<br>• Guide you through booking<br>• Answer scheduling questions<br><br>Start by selecting a date on the calendar!</div>
       </div>
       <div class="flex gap-2 flex-shrink-0">
-        <input id="vChatInput" class="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500" placeholder="Ask about availability..." onkeydown="if(event.key==='Enter')sendVisitorChat()"/>
-        <button onclick="sendVisitorChat()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition text-sm font-medium">Send</button>
+        <input id="vChatIn" class="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm focus:outline-none focus:border-indigo-500" placeholder="Ask about availability..." onkeydown="if(event.key==='Enter')vSendChat()"/>
+        <button onclick="vSendChat()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition text-sm font-medium">Send</button>
       </div>
     </div>
 
   </div>
 </div>
 
-<!-- ══ PASSWORD MODAL ══ -->
-<div id="passwordModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50 backdrop-blur-sm">
-  <div class="bg-slate-900 border border-slate-700 p-8 rounded-2xl w-[350px] shadow-2xl">
+<!-- PASSWORD MODAL -->
+<div id="pwModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50 backdrop-blur-sm">
+  <div class="bg-slate-900 border border-slate-700 p-8 rounded-2xl w-80 shadow-2xl">
     <h2 class="text-xl font-bold mb-2">⚙ Owner Dashboard</h2>
     <p class="text-slate-400 text-sm mb-5">Enter your passcode to continue</p>
-    <input id="ownerPassword" type="password" placeholder="Enter passcode" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 focus:outline-none focus:border-indigo-500" onkeydown="if(event.key==='Enter')checkOwnerLogin()"/>
+    <input id="ownerPw" type="password" placeholder="Enter passcode" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 focus:outline-none focus:border-indigo-500" onkeydown="if(event.key==='Enter')doLogin()"/>
     <p id="loginErr" class="text-red-400 text-xs mb-3 hidden">Incorrect passcode. Please try again.</p>
-    <button onclick="checkOwnerLogin()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition font-semibold mb-2">Login</button>
-    <button onclick="closePasswordModal()" class="w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition text-sm text-slate-400">Cancel</button>
+    <button onclick="doLogin()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition font-semibold mb-2">Login</button>
+    <button onclick="closePwModal()" class="w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition text-sm text-slate-400">Cancel</button>
   </div>
 </div>
 
-<!-- ══ SUCCESS TOAST ══ -->
-<div id="toast" class="hidden fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium"></div>
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-6 right-6 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium bg-green-600"></div>
 
 <script>
-// ── CONSTANTS ──────────────────────────────────────────────────────────────
 const OWNER_PASS = "Usharama@7505";
+const EMAILJS_SERVICE_ID  = "service_yoopnyg";
+const EMAILJS_TEMPLATE_ID = "template_anwow39";
+const EMAILJS_PUBLIC_KEY  = "7PtWUw7mxp1fRlLb6";
 
-// ── STATE ──────────────────────────────────────────────────────────────────
-let calYear, calMonth, selectedDate = null;
+let vCalY, vCalM, vSelDate = null;
 
-// ── INIT ───────────────────────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => {
+  emailjs.init(EMAILJS_PUBLIC_KEY);
   const now = getIST();
-  calYear = now.getFullYear();
-  calMonth = now.getMonth();
-  selectedDate = formatDate(now);
-  renderCalendar();
-  loadSlots(selectedDate);
-  if (sessionStorage.getItem("owner_auth")) showOwnerDashboard();
+  vCalY = now.getFullYear();
+  vCalM = now.getMonth();
+  vSelDate = fmtDate(now);
+  renderVCal();
+  loadSlots(vSelDate);
+  if (sessionStorage.getItem("owner_auth")) goToOwner();
+
+  // Realtime
+  supabaseClient.channel("visitor-rt")
+    .on("postgres_changes", { event: "*", schema: "public", table: "schedules" }, () => { if (vSelDate) loadSlots(vSelDate); })
+    .on("postgres_changes", { event: "*", schema: "public", table: "booking_requests" }, () => { if (vSelDate) loadSlots(vSelDate); })
+    .subscribe();
 });
 
-// ── IST HELPERS ────────────────────────────────────────────────────────────
-function getIST() {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-}
-function formatDate(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-}
-function pad(n) { return String(n).padStart(2, "0"); }
-function formatTime(t) {
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function getIST() { return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })); }
+function fmtDate(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function pad(n) { return String(n).padStart(2,"0"); }
+function fmtTime(t) {
   if (!t) return "";
-  const [h, m] = t.split(":");
+  const [h,m] = t.split(":");
   const hr = parseInt(h);
-  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"} IST`;
+  return `${hr%12||12}:${m} ${hr>=12?"PM":"AM"} IST`;
 }
-
-// ── CALENDAR ───────────────────────────────────────────────────────────────
-function renderCalendar() {
-  const lbl = new Date(calYear, calMonth, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
-  document.getElementById("calLabel").textContent = lbl;
-
-  const grid = document.getElementById("calGrid");
-  grid.innerHTML = "";
-
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const today = formatDate(getIST());
-
-  for (let i = 0; i < firstDay; i++) {
-    const el = document.createElement("div");
-    el.className = "cal-day empty";
-    grid.appendChild(el);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${calYear}-${pad(calMonth+1)}-${pad(d)}`;
-    const el = document.createElement("div");
-    el.className = "cal-day";
-    el.textContent = d;
-
-    if (dateStr < today) {
-      el.classList.add("past");
-    } else {
-      if (dateStr === today) el.classList.add("today");
-      if (dateStr === selectedDate) el.classList.add("selected");
-      el.onclick = () => selectDate(dateStr);
-    }
-    grid.appendChild(el);
-  }
-}
-
-function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
-function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
-
-function selectDate(dateStr) {
-  selectedDate = dateStr;
-  renderCalendar();
-  const [y, m, d] = dateStr.split("-");
-  document.getElementById("slotsLabel").textContent =
-    new Date(y, m-1, d).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
-  loadSlots(dateStr);
-  showBookingForm(dateStr);
-}
-
-// ── SLOTS ──────────────────────────────────────────────────────────────────
-async function loadSlots(date) {
-  const container = document.getElementById("slotsContainer");
-  container.innerHTML = '<p class="text-slate-500 text-sm">Loading...</p>';
-
-  const { data: booked } = await supabaseClient
-    .from("schedules")
-    .select("start_time, end_time")
-    .eq("date", date)
-    .neq("status", "cancelled");
-
-  const { data: pending } = await supabaseClient
-    .from("booking_requests")
-    .select("start_time, end_time")
-    .eq("requested_date", date)
-    .eq("status", "pending");
-
-  // Generate 30-min slots 5am-11pm
-  const slots = [];
-  for (let h = 5; h < 23; h++) {
-    for (let m = 0; m < 60; m += 30) {
-      const s = `${pad(h)}:${pad(m)}`;
-      const eh = m === 30 ? h + 1 : h, em = m === 30 ? 0 : 30;
-      const e = `${pad(eh)}:${pad(em)}`;
-      const isB = (booked || []).some(b => b.start_time.slice(0,5) < e && b.end_time.slice(0,5) > s);
-      const isP = !isB && (pending || []).some(p => p.start_time.slice(0,5) < e && p.end_time.slice(0,5) > s);
-      slots.push({ s, e, isB, isP });
-    }
-  }
-
-  if (slots.every(x => x.isB || x.isP)) {
-    container.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No available slots on this date</p>';
-    return;
-  }
-
-  container.innerHTML = slots.map(sl => `
-    <div class="${sl.isB ? "slot-booked" : sl.isP ? "slot-pending" : "slot-avail"}"
-      ${!sl.isB && !sl.isP ? `onclick="pickSlot('${sl.s}','${sl.e}')"` : ""}>
-      <div class="flex justify-between items-center">
-        <span class="text-sm font-medium">${formatTime(sl.s)} – ${formatTime(sl.e)}</span>
-        <span class="text-xs ${sl.isB ? "text-red-400" : sl.isP ? "text-yellow-400" : "text-green-400"}">
-          ${sl.isB ? "🔒 Booked" : sl.isP ? "⏳ Pending" : "✓ Available"}
-        </span>
-      </div>
-    </div>`).join("");
-}
-
-function pickSlot(start, end) {
-  document.getElementById("bStart").value = start;
-  document.getElementById("bEnd").value = end;
-  document.getElementById("bookingForm").classList.remove("hidden");
-  document.getElementById("bookingForm").scrollIntoView({ behavior: "smooth" });
-}
-
-// ── BOOKING FORM ───────────────────────────────────────────────────────────
-function showBookingForm(date) {
-  document.getElementById("formDate").textContent =
-    new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  document.getElementById("bookingForm").classList.remove("hidden");
-}
-
-function hideBookingForm() {
-  document.getElementById("bookingForm").classList.add("hidden");
-}
-
-function checkCharCount() {
-  const n = document.getElementById("bPurpose").value.length;
-  const el = document.getElementById("charCount");
-  el.textContent = `${n} / 25 characters`;
-  el.className = n >= 25 ? "text-xs text-green-400 mb-3" : "text-xs text-slate-500 mb-3";
-}
-
-async function submitBooking() {
-  const name = document.getElementById("bName").value.trim();
-  const email = document.getElementById("bEmail").value.trim();
-  const purpose = document.getElementById("bPurpose").value.trim();
-  const start = document.getElementById("bStart").value;
-  const end = document.getElementById("bEnd").value;
-  const errEl = document.getElementById("formErr");
-
-  errEl.classList.add("hidden");
-
-  if (!name || !email || !purpose || !start || !end) {
-    showErr("All fields are required"); return;
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    showErr("Invalid email format"); return;
-  }
-  if (end <= start) {
-    showErr("End time must be after start time"); return;
-  }
-  if (purpose.length < 25) {
-    showErr("Purpose needs at least 25 characters"); return;
-  }
-
-  // Check overlap
-  const { data: ov } = await supabaseClient
-    .from("schedules").select("id")
-    .eq("date", selectedDate).neq("status", "cancelled")
-    .lt("start_time", end).gt("end_time", start);
-  if (ov && ov.length) {
-    showErr("This time is no longer available. Please choose another slot."); return;
-  }
-
-  const { error } = await supabaseClient.from("booking_requests").insert([{
-    visitor_name: name,
-    visitor_email: email,
-    requested_date: selectedDate,
-    start_time: start,
-    end_time: end,
-    description: purpose,
-    status: "pending"
-  }]);
-
-  if (error) { showErr("Submission failed. Please try again."); return; }
-
-  showToast("✓ Request submitted! You'll receive an email once the owner reviews it.");
-  hideBookingForm();
-  loadSlots(selectedDate);
-  document.getElementById("bName").value = "";
-  document.getElementById("bEmail").value = "";
-  document.getElementById("bPurpose").value = "";
-  document.getElementById("bStart").value = "";
-  document.getElementById("bEnd").value = "";
-}
-
-function showErr(msg) {
-  const el = document.getElementById("formErr");
-  el.textContent = msg;
-  el.classList.remove("hidden");
-}
-
-// ── PAST REQUESTS ──────────────────────────────────────────────────────────
-async function loadPastRequests() {
-  const email = document.getElementById("pastEmail").value.trim();
-  const el = document.getElementById("pastResults");
-  if (!email) { el.innerHTML = '<p class="text-slate-500 text-xs">Enter your email to search</p>'; return; }
-
-  const { data } = await supabaseClient
-    .from("booking_requests").select("*")
-    .eq("visitor_email", email)
-    .order("created_at", { ascending: false });
-
-  if (!data || !data.length) {
-    el.innerHTML = '<p class="text-slate-500 text-xs mt-2">No requests found for this email.</p>';
-    return;
-  }
-
-  el.innerHTML = data.map(r => `
-    <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
-      <div class="flex justify-between items-center mb-1">
-        <span class="text-sm font-medium">${r.requested_date}</span>
-        <span class="status-${r.status}">${r.status.replace(/_/g," ")}</span>
-      </div>
-      <p class="text-xs text-slate-400">${formatTime(r.start_time)} – ${formatTime(r.end_time)}</p>
-      ${r.owner_remarks ? `<p class="text-xs text-slate-500 mt-1 italic">${r.owner_remarks}</p>` : ""}
-    </div>`).join("");
-}
-
-// ── VISITOR AI CHAT ────────────────────────────────────────────────────────
-async function sendVisitorChat() {
-  const inp = document.getElementById("vChatInput");
-  const msg = inp.value.trim();
-  if (!msg) return;
-  inp.value = "";
-
-  // Show user message
-  appendChat("vChatBox", msg, "user");
-  visitorChatHistory.push({ role: "user", text: msg });
-
-  // Loading indicator
-  const loadId = "load_" + Date.now();
-  document.getElementById("vChatBox").innerHTML +=
-    `<div id="${loadId}" class="msg-ai text-slate-400 italic">⋯ thinking...</div>`;
-  scrollChat("vChatBox");
-
-  // Get available slots context
-  let slotsContext = "";
-  if (selectedDate) {
-    const { data: booked } = await supabaseClient
-      .from("schedules").select("start_time,end_time")
-      .eq("date", selectedDate).neq("status", "cancelled");
-    const bookedSlots = (booked || []).map(b => `${b.start_time.slice(0,5)}-${b.end_time.slice(0,5)}`);
-    slotsContext = bookedSlots.length ? `Booked slots: ${bookedSlots.join(", ")}` : "All slots available";
-  }
-
-  // Call AI
-  const reply = await askVisitorAI(msg, slotsContext ? [slotsContext] : [], selectedDate || "");
-
-  // Remove loading, show reply
-  const loadEl = document.getElementById(loadId);
-  if (loadEl) loadEl.remove();
-  appendChat("vChatBox", reply, "ai");
-  visitorChatHistory.push({ role: "assistant", text: reply });
-  await saveChatMessage(msg, "user", "visitor");
-  await saveChatMessage(reply, "assistant", "visitor");
-}
-
-function appendChat(boxId, text, role) {
-  const box = document.getElementById(boxId);
-  const div = document.createElement("div");
-  div.className = role === "user" ? "msg-user" : "msg-ai";
-  div.innerHTML = String(text).replace(/\n/g, "<br>");
-  box.appendChild(div);
-  scrollChat(boxId);
-}
-
-function scrollChat(boxId) {
-  const el = document.getElementById(boxId);
-  el.scrollTop = el.scrollHeight;
-}
-
-// ── AUTH ───────────────────────────────────────────────────────────────────
-document.getElementById("ownerBtn").addEventListener("click", () => {
-  document.getElementById("passwordModal").classList.remove("hidden");
-  document.getElementById("ownerPassword").value = "";
-  document.getElementById("loginErr").classList.add("hidden");
-});
-
-function closePasswordModal() {
-  document.getElementById("passwordModal").classList.add("hidden");
-}
-
-function checkOwnerLogin() {
-  const pw = document.getElementById("ownerPassword").value;
-  if (pw === OWNER_PASS) {
-    sessionStorage.setItem("owner_auth", "1");
-    closePasswordModal();
-    showOwnerDashboard();
-  } else {
-    document.getElementById("loginErr").classList.remove("hidden");
-  }
-}
-
-function showOwnerDashboard() {
-  window.location.href = "owner.html";
-}
-
-// ── TOAST ──────────────────────────────────────────────────────────────────
-function showToast(msg) {
+function showToast(msg, color="green") {
   const t = document.getElementById("toast");
+  t.className = `fixed bottom-6 right-6 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium bg-${color}-600`;
   t.textContent = msg;
   t.classList.remove("hidden");
   setTimeout(() => t.classList.add("hidden"), 4000);
 }
 
-// Realtime updates
-supabaseClient.channel("visitor-rt")
-  .on("postgres_changes", { event: "*", schema: "public", table: "booking_requests" }, () => {
-    if (selectedDate) loadSlots(selectedDate);
-  })
-  .on("postgres_changes", { event: "*", schema: "public", table: "schedules" }, () => {
-    if (selectedDate) loadSlots(selectedDate);
-  })
-  .subscribe();
+// ── VISITOR CALENDAR (past dates disabled) ────────────────────────────────
+function renderVCal() {
+  document.getElementById("vCalLabel").textContent =
+    new Date(vCalY, vCalM, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+  const grid = document.getElementById("vCalGrid");
+  grid.innerHTML = "";
+  const first = new Date(vCalY, vCalM, 1).getDay();
+  const total = new Date(vCalY, vCalM+1, 0).getDate();
+  const today = fmtDate(getIST());
+
+  for (let i=0; i<first; i++) {
+    const e = document.createElement("div"); e.className="cal-day empty"; grid.appendChild(e);
+  }
+  for (let d=1; d<=total; d++) {
+    const ds = `${vCalY}-${pad(vCalM+1)}-${pad(d)}`;
+    const el = document.createElement("div");
+    el.className = "cal-day"; el.textContent = d;
+    if (ds < today) {
+      el.classList.add("past"); // VISITORS: past dates disabled
+    } else {
+      if (ds === today) el.classList.add("today");
+      if (ds === vSelDate) el.classList.add("selected");
+      el.onclick = () => vSelectDate(ds);
+    }
+    grid.appendChild(el);
+  }
+}
+function vCalPrev() { vCalM--; if(vCalM<0){vCalM=11;vCalY--;} renderVCal(); }
+function vCalNext() { vCalM++; if(vCalM>11){vCalM=0;vCalY++;} renderVCal(); }
+function vSelectDate(ds) {
+  vSelDate = ds;
+  renderVCal();
+  const [y,m,d] = ds.split("-");
+  document.getElementById("slotsDateLabel").textContent =
+    new Date(y,m-1,d).toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
+  loadSlots(ds);
+  // Pre-fill booking form date
+  document.getElementById("formDateLabel").textContent =
+    new Date(y,m-1,d).toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  document.getElementById("bookingForm").classList.remove("hidden");
+}
+
+// ── SLOTS ─────────────────────────────────────────────────────────────────
+async function loadSlots(date) {
+  const c = document.getElementById("slotsContainer");
+  c.innerHTML = '<p class="text-slate-500 text-sm">Loading...</p>';
+  const { data: bk } = await supabaseClient.from("schedules").select("start_time,end_time").eq("date",date).neq("status","cancelled");
+  const { data: pd } = await supabaseClient.from("booking_requests").select("start_time,end_time").eq("requested_date",date).eq("status","pending");
+  const slots = [];
+  for (let h=5; h<23; h++) {
+    for (let m=0; m<60; m+=30) {
+      const s=`${pad(h)}:${pad(m)}`, eh=m===30?h+1:h, em=m===30?0:30, e=`${pad(eh)}:${pad(em)}`;
+      const isB=(bk||[]).some(x=>x.start_time.slice(0,5)<e&&x.end_time.slice(0,5)>s);
+      const isP=!isB&&(pd||[]).some(x=>x.start_time.slice(0,5)<e&&x.end_time.slice(0,5)>s);
+      slots.push({s,e,isB,isP});
+    }
+  }
+  if (slots.every(x=>x.isB||x.isP)) {
+    c.innerHTML='<p class="text-slate-500 text-sm text-center py-8">No available slots on this date</p>'; return;
+  }
+  c.innerHTML = slots.map(sl=>`
+    <div class="${sl.isB?"slot-booked":sl.isP?"slot-pending":"slot-avail"}"
+      ${!sl.isB&&!sl.isP?`onclick="pickSlot('${sl.s}','${sl.e}')"`:""}>
+      <div class="flex justify-between items-center">
+        <span class="text-sm font-medium">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
+        <span class="text-xs ${sl.isB?"text-red-400":sl.isP?"text-yellow-400":"text-green-400"}">
+          ${sl.isB?"🔒 Booked":sl.isP?"⏳ Pending":"✓ Available"}
+        </span>
+      </div>
+    </div>`).join("");
+}
+
+function pickSlot(s,e) {
+  document.getElementById("bStart").value = s;
+  document.getElementById("bEnd").value = e;
+  document.getElementById("bookingForm").classList.remove("hidden");
+  document.getElementById("bookingForm").scrollIntoView({behavior:"smooth"});
+}
+
+function updateCharCount() {
+  const n = document.getElementById("bPurpose").value.length;
+  const el = document.getElementById("charCount");
+  el.textContent = `${n} / 25 characters`;
+  el.className = n>=25 ? "text-xs text-green-400 mb-3" : "text-xs text-slate-500 mb-3";
+}
+
+// ── BOOKING SUBMIT ────────────────────────────────────────────────────────
+async function submitBooking() {
+  const name    = document.getElementById("bName").value.trim();
+  const email   = document.getElementById("bEmail").value.trim();
+  const purpose = document.getElementById("bPurpose").value.trim();
+  const start   = document.getElementById("bStart").value;
+  const end     = document.getElementById("bEnd").value;
+  const errEl   = document.getElementById("bookErr");
+  errEl.classList.add("hidden");
+
+  if (!name||!email||!purpose||!start||!end) { errEl.textContent="All fields required"; errEl.classList.remove("hidden"); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent="Invalid email"; errEl.classList.remove("hidden"); return; }
+  if (end<=start) { errEl.textContent="End time must be after start time"; errEl.classList.remove("hidden"); return; }
+  if (purpose.length<25) { errEl.textContent="Purpose needs at least 25 characters"; errEl.classList.remove("hidden"); return; }
+
+  const { data:ov } = await supabaseClient.from("schedules").select("id")
+    .eq("date",vSelDate).neq("status","cancelled").lt("start_time",end).gt("end_time",start);
+  if (ov&&ov.length) { errEl.textContent="This time is no longer available. Choose another slot."; errEl.classList.remove("hidden"); return; }
+
+  const { error } = await supabaseClient.from("booking_requests").insert([{
+    visitor_name:name, visitor_email:email, requested_date:vSelDate,
+    start_time:start, end_time:end, description:purpose, status:"pending"
+  }]);
+  if (error) { errEl.textContent="Submission failed. Try again."; errEl.classList.remove("hidden"); return; }
+
+  // ── Send email to VISITOR (booking confirmation) ──────────────────────
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     email,
+      to_name:      name,
+      subject:      "Your Meeting Request Has Been Received — MyScheduler",
+      message:      `Hi ${name},\n\nYour meeting request has been submitted successfully and is now pending review.\n\nMeeting Details:\nDate: ${vSelDate}\nStart: ${fmtTime(start)}\nEnd: ${fmtTime(end)}\nPurpose: ${purpose}\n\nYou will receive another email once the owner reviews your request.\n\nThank you!`,
+      meeting_date: vSelDate,
+      start_time:   fmtTime(start),
+      end_time:     fmtTime(end),
+      status:       "⏳ PENDING REVIEW",
+      remarks:      "Your request is under review. You will be notified once approved."
+    });
+    console.log("✅ Confirmation email sent to visitor:", email);
+  } catch(e) { console.warn("Visitor email failed:", e); }
+
+  // ── Send email to OWNER (notification with full details) ──────────────
+  const ownerEmail = "mannamvyshnavi795@gmail.com"; // owner's email
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     ownerEmail,
+      to_name:      "Owner",
+      subject:      `New Meeting Request from ${name} — MyScheduler`,
+      message:      `A new meeting request has been received.\n\nVisitor Name: ${name}\nVisitor Email: ${email}\nDate: ${vSelDate}\nStart Time: ${fmtTime(start)}\nEnd Time: ${fmtTime(end)}\nPurpose: ${purpose}\n\nPlease log in to MyScheduler to approve or reject this request.`,
+      meeting_date: vSelDate,
+      start_time:   fmtTime(start),
+      end_time:     fmtTime(end),
+      status:       "🔔 NEW REQUEST",
+      remarks:      `From: ${name} (${email})`
+    });
+    console.log("✅ Notification email sent to owner");
+  } catch(e) { console.warn("Owner notification email failed:", e); }
+
+  showToast("✓ Request submitted! Check your email for confirmation.");
+  document.getElementById("bookingForm").classList.add("hidden");
+  ["bName","bEmail","bPurpose","bStart","bEnd"].forEach(id=>document.getElementById(id).value="");
+  loadSlots(vSelDate);
+}
+
+// ── PAST REQUESTS ─────────────────────────────────────────────────────────
+async function loadPastRequests() {
+  const email = document.getElementById("pastEmail").value.trim();
+  const el = document.getElementById("pastResults");
+  if (!email) { el.innerHTML='<p class="text-slate-500 text-xs">Enter email to search</p>'; return; }
+  const { data } = await supabaseClient.from("booking_requests").select("*")
+    .eq("visitor_email",email).order("created_at",{ascending:false});
+  if (!data||!data.length) { el.innerHTML='<p class="text-slate-500 text-xs mt-2">No requests found.</p>'; return; }
+  el.innerHTML = data.map(r=>`
+    <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-sm font-medium">${r.requested_date}</span>
+        <span class="status-${r.status}">${r.status.replace(/_/g," ")}</span>
+      </div>
+      <p class="text-xs text-slate-400">${fmtTime(r.start_time)} – ${fmtTime(r.end_time)}</p>
+      ${r.owner_remarks?`<p class="text-xs text-slate-500 mt-1 italic">${r.owner_remarks}</p>`:""}
+    </div>`).join("");
+}
+
+// ── VISITOR AI CHAT ───────────────────────────────────────────────────────
+async function vSendChat() {
+  const inp = document.getElementById("vChatIn");
+  const msg = inp.value.trim(); if (!msg) return;
+  inp.value = ""; inp.disabled = true;
+
+  vAppendMsg(msg, "user");
+  visitorChatHistory.push({ role:"user", text:msg });
+
+  const loadDiv = document.createElement("div");
+  loadDiv.className = "msg-ai text-slate-400 italic"; loadDiv.id = "vLoading";
+  loadDiv.textContent = "⋯ thinking...";
+  document.getElementById("vChatBox").appendChild(loadDiv);
+  scrollChat("vChatBox");
+
+  // Get booked slots context
+  let bookedSlots = [];
+  if (vSelDate) {
+    const { data } = await supabaseClient.from("schedules").select("start_time,end_time")
+      .eq("date",vSelDate).neq("status","cancelled");
+    bookedSlots = (data||[]).map(x=>`${x.start_time.slice(0,5)}-${x.end_time.slice(0,5)}`);
+  }
+
+  try {
+    const reply = await askVisitorAI(msg, bookedSlots, vSelDate||"");
+    document.getElementById("vLoading")?.remove();
+    vAppendMsg(reply, "ai");
+    visitorChatHistory.push({ role:"assistant", text:reply });
+    await saveChatMessage(msg,"user","visitor");
+    await saveChatMessage(reply,"assistant","visitor");
+  } catch(e) {
+    document.getElementById("vLoading")?.remove();
+    vAppendMsg("Sorry, AI is temporarily unavailable. Please use the booking form directly.", "ai");
+  }
+  inp.disabled = false; inp.focus();
+}
+
+function vAppendMsg(text, role) {
+  const box = document.getElementById("vChatBox");
+  const div = document.createElement("div");
+  div.className = role==="user" ? "msg-user" : "msg-ai";
+  div.innerHTML = String(text).replace(/\n/g,"<br>");
+  box.appendChild(div); scrollChat("vChatBox");
+}
+function scrollChat(id) { const el=document.getElementById(id); el.scrollTop=el.scrollHeight; }
+
+// ── AUTH ──────────────────────────────────────────────────────────────────
+document.getElementById("ownerBtn").addEventListener("click",()=>{
+  document.getElementById("pwModal").classList.remove("hidden");
+  document.getElementById("ownerPw").value="";
+  document.getElementById("loginErr").classList.add("hidden");
+});
+function closePwModal() { document.getElementById("pwModal").classList.add("hidden"); }
+function doLogin() {
+  if (document.getElementById("ownerPw").value===OWNER_PASS) {
+    sessionStorage.setItem("owner_auth","1");
+    closePwModal(); goToOwner();
+  } else { document.getElementById("loginErr").classList.remove("hidden"); }
+}
+function goToOwner() { window.location.href="owner.html"; }
 </script>
 </body>
 </html>
