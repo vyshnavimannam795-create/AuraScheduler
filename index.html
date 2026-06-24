@@ -286,30 +286,29 @@ async function submitBooking() {
   }]);
   if (error) { errEl.textContent="Submission failed. Try again."; errEl.classList.remove("hidden"); return; }
 
-  // ── Send email to VISITOR (booking confirmation) ──────────────────────
+  // ── Email to VISITOR: booking received confirmation ─────────────────────
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       to_email:     email,
       to_name:      name,
-      subject:      "Your Meeting Request Has Been Received — MyScheduler",
-      message:      `Hi ${name},\n\nYour meeting request has been submitted successfully and is now pending review.\n\nMeeting Details:\nDate: ${vSelDate}\nStart: ${fmtTime(start)}\nEnd: ${fmtTime(end)}\nPurpose: ${purpose}\n\nYou will receive another email once the owner reviews your request.\n\nThank you!`,
+      subject:      "📅 Meeting Request Received — MyScheduler",
+      message:      `Hi ${name},\n\nYour meeting request has been submitted and is now pending review.\n\n📋 Request Details:\n• Visitor Name: ${name}\n• Date: ${vSelDate}\n• Start Time: ${fmtTime(start)}\n• End Time: ${fmtTime(end)}\n• Purpose: ${purpose}\n• Status: ⏳ PENDING REVIEW\n\nYou will receive another email once the owner reviews your request.\n\nThank you for using MyScheduler!`,
       meeting_date: vSelDate,
       start_time:   fmtTime(start),
       end_time:     fmtTime(end),
       status:       "⏳ PENDING REVIEW",
-      remarks:      "Your request is under review. You will be notified once approved."
+      remarks:      "Your request has been received and is under review."
     });
     console.log("✅ Confirmation email sent to visitor:", email);
-  } catch(e) { console.warn("Visitor email failed:", e); }
+  } catch(e) { console.error("❌ Visitor email failed:", e); }
 
-  // ── Send email to OWNER (notification with full details) ──────────────
-  const ownerEmail = "mannamvyshnavi795@gmail.com"; // owner's email
+  // ── Email to OWNER: new booking notification ─────────────────────────
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     ownerEmail,
+      to_email:     "mannamvyshnavi795@gmail.com",
       to_name:      "Owner",
-      subject:      `New Meeting Request from ${name} — MyScheduler`,
-      message:      `A new meeting request has been received.\n\nVisitor Name: ${name}\nVisitor Email: ${email}\nDate: ${vSelDate}\nStart Time: ${fmtTime(start)}\nEnd Time: ${fmtTime(end)}\nPurpose: ${purpose}\n\nPlease log in to MyScheduler to approve or reject this request.`,
+      subject:      `🔔 New Meeting Request from ${name} — MyScheduler`,
+      message:      `A new meeting request has been received.\n\n📋 Request Details:\n• Visitor Name: ${name}\n• Visitor Email: ${email}\n• Date: ${vSelDate}\n• Start Time: ${fmtTime(start)}\n• End Time: ${fmtTime(end)}\n• Purpose: ${purpose}\n\nPlease log in to MyScheduler to approve or reject this request.`,
       meeting_date: vSelDate,
       start_time:   fmtTime(start),
       end_time:     fmtTime(end),
@@ -317,7 +316,7 @@ async function submitBooking() {
       remarks:      `From: ${name} (${email})`
     });
     console.log("✅ Notification email sent to owner");
-  } catch(e) { console.warn("Owner notification email failed:", e); }
+  } catch(e) { console.error("❌ Owner notification email failed:", e); }
 
   showToast("✓ Request submitted! Check your email for confirmation.");
   document.getElementById("bookingForm").classList.add("hidden");

@@ -506,25 +506,25 @@ async function doReqAction(id,action,remarks=""){
       owner_remarks:remarks||null,updated_at:new Date().toISOString()
     }).eq("id",id);
 
-    // Email to VISITOR — approval with full details
-    await sendEmailTo(req.visitor_email,req.visitor_name,"approved",req,remarks);
-    // Email to OWNER — confirmation
-    await sendEmailTo(OWNER_EMAIL,"Owner","owner_approved",req,remarks);
-    showToast("✓ Approved! Emails sent to visitor and owner.","green");
+    // Email to VISITOR — approval confirmation
+    await sendEmailTo(req.visitor_email, req.visitor_name, "approved", req, remarks);
+    // Email to OWNER — confirmation copy
+    await sendEmailTo(OWNER_EMAIL, "Owner", "owner_approved", req, remarks);
+    showToast("✓ Approved! Emails sent to visitor and owner.", "green");
 
   } else if(action==="reschedule"){
     await supabaseClient.from("booking_requests").update({
       status:"reschedule_requested",owner_remarks:remarks,updated_at:new Date().toISOString()
     }).eq("id",id);
-    await sendEmailTo(req.visitor_email,req.visitor_name,"reschedule",req,remarks);
-    showToast("Reschedule request sent!","yellow");
+    await sendEmailTo(req.visitor_email, req.visitor_name, "reschedule", req, remarks);
+    showToast("Reschedule request sent!", "yellow");
 
   } else if(action==="decline"){
     await supabaseClient.from("booking_requests").update({
       status:"declined",owner_remarks:remarks||null,updated_at:new Date().toISOString()
     }).eq("id",id);
-    await sendEmailTo(req.visitor_email,req.visitor_name,"rejected",req,remarks);
-    showToast("Request rejected. Email sent to visitor.","red");
+    await sendEmailTo(req.visitor_email, req.visitor_name, "rejected", req, remarks);
+    showToast("Request rejected. Email sent to visitor.", "red");
   }
 
   loadRequests(); loadOEvDates(); loadOSlots(); loadStats();
@@ -546,33 +546,38 @@ async function confirmRmk(){
   await doReqAction(rmkReqId,rmkAction,remarks);
 }
 
-// ── EMAIL SYSTEM ────────────────────────────────────────────────────────────
-async function sendEmailTo(toEmail, toName, type, req, remarks=""){
-  const configs = {
+// ── EMAIL SYSTEM ─────────────────────────────────────────────────────────────
+async function sendEmailTo(toEmail, toName, type, req, remarks = "") {
+  const templates = {
     approved: {
-      subject: "✓ Your Meeting Has Been Approved — MyScheduler",
-      message: `Great news, ${req.visitor_name}!\n\nYour meeting request has been APPROVED.\n\nMeeting Details:\nDate: ${req.requested_date}\nStart: ${fmtTime(req.start_time)}\nEnd: ${fmtTime(req.end_time)}\n${remarks?"Owner's Note: "+remarks+"\n":""}\nPlease be prepared at the scheduled time.\n\nThank you!`,
-      status: "✓ APPROVED"
+      subject: "✅ Meeting Approved — MyScheduler",
+      message: `Hi ${toName},\n\nYour meeting request has been APPROVED!\n\n📋 Meeting Details:\n• Visitor Name: ${toName}\n• Date: ${req.requested_date}\n• Start Time: ${fmtTime(req.start_time)}\n• End Time: ${fmtTime(req.end_time)}\n• Status: ✅ APPROVED\n${remarks ? "\n💬 Owner Note: " + remarks : ""}\n\nPlease be prepared at the scheduled time.\n\nThank you!`,
+      status: "✅ APPROVED"
     },
     rejected: {
-      subject: "Your Meeting Request Has Been Declined — MyScheduler",
-      message: `Hi ${req.visitor_name},\n\nUnfortunately, your meeting request for ${req.requested_date} (${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}) has been declined.\n\n${remarks?"Reason: "+remarks+"\n":""}\nPlease feel free to submit a new request for a different time.\n\nThank you!`,
-      status: "✕ DECLINED"
+      subject: "❌ Meeting Request Declined — MyScheduler",
+      message: `Hi ${toName},\n\nYour meeting request has been declined.\n\n📋 Details:\n• Date: ${req.requested_date}\n• Time: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\n• Status: ❌ DECLINED\n${remarks ? "\n💬 Reason: " + remarks : ""}\n\nFeel free to book a new slot.\n\nThank you!`,
+      status: "❌ DECLINED"
     },
     reschedule: {
-      subject: "Reschedule Requested — MyScheduler",
-      message: `Hi ${req.visitor_name},\n\nThe owner has requested to reschedule your meeting originally planned for ${req.requested_date} (${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}).\n\nMessage from owner: ${remarks||"Please suggest a new time."}\n\nPlease visit MyScheduler to book a new slot.\n\nThank you!`,
-      status: "⟳ RESCHEDULE REQUESTED"
+      subject: "🔄 Reschedule Requested — MyScheduler",
+      message: `Hi ${toName},\n\nThe owner has requested to reschedule your meeting.\n\n📋 Original:\n• Date: ${req.requested_date}\n• Time: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\n\n💬 Owner Message: ${remarks || "Please suggest a new time."}\n\nPlease visit MyScheduler to book a new slot.`,
+      status: "🔄 RESCHEDULE"
+    },
+    cancelled: {
+      subject: "❌ Meeting Cancelled — MyScheduler",
+      message: `Hi ${toName},\n\nYour meeting has been cancelled.\n\n📋 Details:\n• Date: ${req.requested_date}\n• Time: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\n• Status: ❌ CANCELLED\n${remarks ? "\n💬 Reason: " + remarks : ""}\n\nPlease feel free to schedule a new meeting.`,
+      status: "❌ CANCELLED"
     },
     owner_approved: {
-      subject: `Meeting Approved: ${req.visitor_name} on ${req.requested_date}`,
-      message: `You approved a meeting request.\n\nVisitor: ${req.visitor_name}\nEmail: ${req.visitor_email}\nDate: ${req.requested_date}\nTime: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\nPurpose: ${req.description}\n${remarks?"Your note: "+remarks:""}`,
-      status: "✓ CONFIRMED"
+      subject: `✅ Confirmed: ${req.visitor_name} on ${req.requested_date} — MyScheduler`,
+      message: `You approved a meeting.\n\n📋 Meeting Details:\n• Visitor: ${req.visitor_name}\n• Email: ${req.visitor_email}\n• Date: ${req.requested_date}\n• Time: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\n• Purpose: ${req.description}\n${remarks ? "\nYour Note: " + remarks : ""}`,
+      status: "✅ CONFIRMED"
     }
   };
 
-  const cfg = configs[type];
-  if (!cfg) return;
+  const cfg = templates[type];
+  if (!cfg) { console.warn("Unknown email type:", type); return; }
 
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
@@ -580,15 +585,15 @@ async function sendEmailTo(toEmail, toName, type, req, remarks=""){
       to_name:      toName,
       subject:      cfg.subject,
       message:      cfg.message,
-      meeting_date: req.requested_date,
+      meeting_date: req.requested_date || "",
       start_time:   fmtTime(req.start_time),
       end_time:     fmtTime(req.end_time),
       status:       cfg.status,
-      remarks:      remarks||"None"
+      remarks:      remarks || "None"
     });
-    console.log(`✅ Email sent (${type}) to:`, toEmail);
+    console.log(`✅ Email [${type}] sent to:`, toEmail);
   } catch(e) {
-    console.warn(`❌ Email failed (${type}):`, e);
+    console.error(`❌ Email [${type}] failed for:`, toEmail, e);
   }
 }
 
