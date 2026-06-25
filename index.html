@@ -221,27 +221,51 @@ function vSelectDate(ds) {
 async function loadSlots(date) {
   const c = document.getElementById("slotsContainer");
   c.innerHTML = '<p class="text-slate-500 text-sm">Loading...</p>';
-  const { data: bk } = await supabaseClient.from("schedules").select("start_time,end_time").eq("date",date).neq("status","cancelled");
-  const { data: pd } = await supabaseClient.from("booking_requests").select("start_time,end_time").eq("requested_date",date).eq("status","pending");
+
+  // BOTH tables fetched — comprehensive conflict check
+  // schedules: owner-confirmed meetings
+  const { data: bk } = await supabaseClient
+    .from("schedules")
+    .select("start_time,end_time")
+    .eq("date", date)
+    .neq("status", "cancelled");
+
+  // booking_requests: block pending + accepted (prevents double booking)
+  const { data: allReqs } = await supabaseClient
+    .from("booking_requests")
+    .select("start_time,end_time,status")
+    .eq("requested_date", date)
+    .in("status", ["pending", "accepted", "accepted_with_remarks"]);
+
+  const pendingReqs   = (allReqs||[]).filter(x => x.status === "pending");
+  const acceptedReqs  = (allReqs||[]).filter(x => x.status === "accepted" || x.status === "accepted_with_remarks");
+
   const slots = [];
   for (let h=5; h<23; h++) {
     for (let m=0; m<60; m+=30) {
       const s=`${pad(h)}:${pad(m)}`, eh=m===30?h+1:h, em=m===30?0:30, e=`${pad(eh)}:${pad(em)}`;
-      const isB=(bk||[]).some(x=>x.start_time.slice(0,5)<e&&x.end_time.slice(0,5)>s);
-      const isP=!isB&&(pd||[]).some(x=>x.start_time.slice(0,5)<e&&x.end_time.slice(0,5)>s);
-      slots.push({s,e,isB,isP});
+
+      // Overlap: newStart < existingEnd AND newEnd > existingStart
+      const overlap = (arr) => arr.some(x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s);
+
+      const isBooked  = overlap(bk||[]) || overlap(acceptedReqs); // red — fully confirmed
+      const isPending = !isBooked && overlap(pendingReqs);          // yellow — awaiting approval
+
+      slots.push({s, e, isB: isBooked, isP: isPending});
     }
   }
+
   if (slots.every(x=>x.isB||x.isP)) {
     c.innerHTML='<p class="text-slate-500 text-sm text-center py-8">No available slots on this date</p>'; return;
   }
+
   c.innerHTML = slots.map(sl=>`
     <div class="${sl.isB?"slot-booked":sl.isP?"slot-pending":"slot-avail"}"
-      ${!sl.isB&&!sl.isP?`onclick="pickSlot('${sl.s}','${sl.e}')"`:""}>
+      ${!sl.isB&&!sl.isP?`onclick="pickSlot('${sl.s}','${sl.e}')"`:""}> 
       <div class="flex justify-between items-center">
         <span class="text-sm font-medium">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
         <span class="text-xs ${sl.isB?"text-red-400":sl.isP?"text-yellow-400":"text-green-400"}">
-          ${sl.isB?"🔒 Booked":sl.isP?"⏳ Pending":"✓ Available"}
+          ${sl.isB?"🔒 Booked":sl.isP?"⏳ Pending (Under Review)":"✓ Available"}
         </span>
       </div>
     </div>`).join("");

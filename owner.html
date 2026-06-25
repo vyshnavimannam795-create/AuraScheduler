@@ -506,11 +506,11 @@ async function doReqAction(id,action,remarks=""){
       owner_remarks:remarks||null,updated_at:new Date().toISOString()
     }).eq("id",id);
 
-    // Email to VISITOR — approval confirmation
+    // ── Email to VISITOR: meeting approved ───────────────────────────────
     await sendEmailTo(req.visitor_email, req.visitor_name, "approved", req, remarks);
-    // Email to OWNER — confirmation copy
+    // ── Email to OWNER: confirmation copy ────────────────────────────────
     await sendEmailTo(OWNER_EMAIL, "Owner", "owner_approved", req, remarks);
-    showToast("✓ Approved! Emails sent to visitor and owner.", "green");
+    showToast("✓ Approved! Confirmation emails sent to visitor and owner.", "green");
 
   } else if(action==="reschedule"){
     await supabaseClient.from("booking_requests").update({
@@ -548,30 +548,106 @@ async function confirmRmk(){
 
 // ── EMAIL SYSTEM ─────────────────────────────────────────────────────────────
 async function sendEmailTo(toEmail, toName, type, req, remarks = "") {
+
+  // Email content for each action type
   const templates = {
+
+    // ── Visitor: booking approved ─────────────────────────────────────────
     approved: {
-      subject: "✅ Meeting Approved — MyScheduler",
-      message: `Hi ${toName},\n\nYour meeting request has been APPROVED!\n\n📋 Meeting Details:\n• Visitor Name: ${toName}\n• Date: ${req.requested_date}\n• Start Time: ${fmtTime(req.start_time)}\n• End Time: ${fmtTime(req.end_time)}\n• Status: ✅ APPROVED\n${remarks ? "\n💬 Owner Note: " + remarks : ""}\n\nPlease be prepared at the scheduled time.\n\nThank you!`,
+      subject: "✅ Your Meeting Has Been Approved — MyScheduler",
+      message: `Hi ${toName},
+
+Your meeting request has been APPROVED!
+
+📋 Meeting Details:
+• Visitor Name: ${toName}
+• Date: ${req.requested_date}
+• Start Time: ${fmtTime(req.start_time)}
+• End Time: ${fmtTime(req.end_time)}
+• Status: ✅ APPROVED
+${remarks ? "\n💬 Note from Owner: " + remarks : ""}
+
+Please be prepared at the scheduled time.
+
+Thank you for using MyScheduler!`,
       status: "✅ APPROVED"
     },
+
+    // ── Visitor: booking rejected ─────────────────────────────────────────
     rejected: {
       subject: "❌ Meeting Request Declined — MyScheduler",
-      message: `Hi ${toName},\n\nYour meeting request has been declined.\n\n📋 Details:\n• Date: ${req.requested_date}\n• Time: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\n• Status: ❌ DECLINED\n${remarks ? "\n💬 Reason: " + remarks : ""}\n\nFeel free to book a new slot.\n\nThank you!`,
+      message: `Hi ${toName},
+
+Your meeting request has been declined.
+
+📋 Request Details:
+• Date: ${req.requested_date}
+• Start Time: ${fmtTime(req.start_time)}
+• End Time: ${fmtTime(req.end_time)}
+• Status: ❌ DECLINED
+${remarks ? "\n💬 Reason: " + remarks : ""}
+
+Feel free to submit a new request for a different time.
+
+Thank you!`,
       status: "❌ DECLINED"
     },
+
+    // ── Visitor: reschedule requested ─────────────────────────────────────
     reschedule: {
       subject: "🔄 Reschedule Requested — MyScheduler",
-      message: `Hi ${toName},\n\nThe owner has requested to reschedule your meeting.\n\n📋 Original:\n• Date: ${req.requested_date}\n• Time: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\n\n💬 Owner Message: ${remarks || "Please suggest a new time."}\n\nPlease visit MyScheduler to book a new slot.`,
-      status: "🔄 RESCHEDULE"
+      message: `Hi ${toName},
+
+The owner has requested to reschedule your meeting.
+
+📋 Original Details:
+• Date: ${req.requested_date}
+• Start Time: ${fmtTime(req.start_time)}
+• End Time: ${fmtTime(req.end_time)}
+
+💬 Message from Owner: ${remarks || "Please suggest a new time."}
+
+Please visit MyScheduler to book a new available slot.
+
+Thank you!`,
+      status: "🔄 RESCHEDULE REQUESTED"
     },
+
+    // ── Visitor: meeting cancelled ────────────────────────────────────────
     cancelled: {
       subject: "❌ Meeting Cancelled — MyScheduler",
-      message: `Hi ${toName},\n\nYour meeting has been cancelled.\n\n📋 Details:\n• Date: ${req.requested_date}\n• Time: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\n• Status: ❌ CANCELLED\n${remarks ? "\n💬 Reason: " + remarks : ""}\n\nPlease feel free to schedule a new meeting.`,
+      message: `Hi ${toName},
+
+Your meeting has been cancelled.
+
+📋 Details:
+• Date: ${req.requested_date}
+• Start Time: ${fmtTime(req.start_time)}
+• End Time: ${fmtTime(req.end_time)}
+• Status: ❌ CANCELLED
+${remarks ? "\n💬 Reason: " + remarks : ""}
+
+Please feel free to schedule a new meeting.
+
+Thank you!`,
       status: "❌ CANCELLED"
     },
+
+    // ── Owner: approval confirmation copy ────────────────────────────────
     owner_approved: {
-      subject: `✅ Confirmed: ${req.visitor_name} on ${req.requested_date} — MyScheduler`,
-      message: `You approved a meeting.\n\n📋 Meeting Details:\n• Visitor: ${req.visitor_name}\n• Email: ${req.visitor_email}\n• Date: ${req.requested_date}\n• Time: ${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}\n• Purpose: ${req.description}\n${remarks ? "\nYour Note: " + remarks : ""}`,
+      subject: `✅ Confirmed: ${req.visitor_name} — ${req.requested_date} — MyScheduler`,
+      message: `You approved a meeting request.
+
+📋 Meeting Details:
+• Visitor Name: ${req.visitor_name}
+• Visitor Email: ${req.visitor_email}
+• Date: ${req.requested_date}
+• Start Time: ${fmtTime(req.start_time)}
+• End Time: ${fmtTime(req.end_time)}
+• Purpose: ${req.description}
+${remarks ? "\n• Your Note: " + remarks : ""}
+
+This meeting has been added to your schedule.`,
       status: "✅ CONFIRMED"
     }
   };
@@ -581,14 +657,14 @@ async function sendEmailTo(toEmail, toName, type, req, remarks = "") {
 
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      // ── Variables matching your EmailJS template exactly ──────
-      visitor_name:   toName,           // {{visitor_name}} in template
-      visitor_email:  toEmail,          // {{visitor_email}} in template
-      requested_date: req.requested_date || "", // {{requested_date}} in template
-      name:           toName,           // {{name}} = From Name field
-      email:          toEmail,          // {{email}} = Reply To field
+      // ── Exact variable names matching your EmailJS template ───────────
+      visitor_name:   toName,                    // {{visitor_name}}
+      visitor_email:  toEmail,                   // {{visitor_email}}
+      requested_date: req.requested_date || "",  // {{requested_date}}
+      name:           toName,                    // {{name}} = From Name field
+      email:          toEmail,                   // {{email}} = Reply To field
 
-      // ── Extra variables for richer emails ─────────────────────
+      // ── Additional content variables ──────────────────────────────────
       subject:        cfg.subject,
       message:        cfg.message,
       start_time:     fmtTime(req.start_time),
@@ -596,11 +672,13 @@ async function sendEmailTo(toEmail, toName, type, req, remarks = "") {
       status:         cfg.status,
       remarks:        remarks || "None"
     });
-    console.log(`✅ Email [${type}] sent to:`, toEmail);
+    console.log(`✅ Email [${type}] sent to: ${toEmail}`);
   } catch(e) {
-    console.error(`❌ Email [${type}] failed for:`, toEmail, e);
+    console.error(`❌ Email [${type}] FAILED for: ${toEmail}`, e);
+    // Show warning but don't break the UI — action already saved in Supabase
   }
 }
+
 
 // ── OWNER AI CHAT ──────────────────────────────────────────────────────────
 async function oSendChat(){
