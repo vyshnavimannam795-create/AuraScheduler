@@ -15,7 +15,7 @@ body{background:#0f172a;color:white}
 .slot-avail{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:10px 14px;cursor:pointer;transition:all .2s}
 .slot-avail:hover{background:rgba(16,185,129,.2);border-color:#10b981;transform:translateX(3px)}
 .slot-booked{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;cursor:not-allowed;opacity:.55}
-.slot-pending{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 14px;cursor:not-allowed;opacity:.65}
+.slot-pending{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 14px;cursor:pointer;opacity:.85;transition:all .2s}
 .msg-user{background:#4f46e5;border-radius:16px 16px 4px 16px;padding:10px 14px;margin-bottom:8px;max-width:85%;margin-left:auto;font-size:.875rem;word-break:break-word}
 .msg-ai{background:#1e293b;border:1px solid #334155;border-radius:16px 16px 16px 4px;padding:10px 14px;margin-bottom:8px;max-width:85%;font-size:.875rem;line-height:1.6;word-break:break-word}
 .cal-day{text-align:center;padding:7px 2px;border-radius:8px;cursor:pointer;font-size:.82rem;color:#94a3b8;transition:all .15s;position:relative}
@@ -222,13 +222,14 @@ async function loadSlots(date) {
   const c = document.getElementById("slotsContainer");
   c.innerHTML = '<p class="text-slate-500 text-sm">Loading...</p>';
 
-  // Fetch ALL blocking data from BOTH tables
+  // Fetch confirmed schedule slots (owner-added or accepted meetings)
   const { data: bk } = await supabaseClient
     .from("schedules")
     .select("start_time,end_time")
     .eq("date", date)
     .neq("status","cancelled");
 
+  // Fetch booking requests
   const { data: allReqs } = await supabaseClient
     .from("booking_requests")
     .select("start_time,end_time,status")
@@ -236,51 +237,75 @@ async function loadSlots(date) {
     .in("status", ["pending","accepted","accepted_with_remarks"]);
 
   const pendingReqs  = (allReqs||[]).filter(x => x.status === "pending");
-  const acceptedReqs = (allReqs||[]).filter(x => x.status === "accepted" || x.status === "accepted_with_remarks");
+  const acceptedReqs = (allReqs||[]).filter(x =>
+    x.status === "accepted" || x.status === "accepted_with_remarks"
+  );
 
   const slots = [];
   for (let h=5; h<23; h++) {
     for (let m=0; m<60; m+=30) {
-      const s=`${pad(h)}:${pad(m)}`, eh=m===30?h+1:h, em=m===30?0:30, e=`${pad(eh)}:${pad(em)}`;
-      const ov = (arr) => arr.some(x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s);
+      const s=`${pad(h)}:${pad(m)}`;
+      const eh=m===30?h+1:h, em=m===30?0:30;
+      const e=`${pad(eh)}:${pad(em)}`;
 
-      // Count how many pending requests overlap this slot
-      const pendingCount = pendingReqs.filter(x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s).length;
+      const overlaps = (arr) => arr.some(
+        x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s
+      );
 
-      const isBooked  = ov(bk||[]) || ov(acceptedReqs); // locked — red
-      const isPending = !isBooked && pendingCount > 0;    // pending — yellow, NOT clickable
+      const pendingCount = pendingReqs.filter(
+        x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s
+      ).length;
 
-      slots.push({s, e, isBooked, isPending, pendingCount});
+      // LOCKED only when: in schedules table OR owner accepted a request
+      const isBooked  = overlaps(bk||[]) || overlaps(acceptedReqs);
+      // PENDING = has requests but owner not decided yet — still CLICKABLE
+      const isPending = !isBooked && pendingCount > 0;
+
+      slots.push({ s, e, isBooked, isPending, pendingCount });
     }
   }
 
-  if (slots.every(x=>x.isBooked||x.isPending)) {
-    c.innerHTML='<p class="text-slate-500 text-sm text-center py-8">No available slots on this date</p>'; return;
+  if (slots.every(x => x.isBooked)) {
+    c.innerHTML = '<p class="text-slate-500 text-sm text-center py-8">No available slots on this date</p>';
+    return;
   }
 
   c.innerHTML = slots.map(sl => {
-    let cls, label, clickable;
     if (sl.isBooked) {
-      cls = "slot-booked"; clickable = false;
-      label = `<span class="text-xs text-red-400">🔒 Booked</span>`;
+      // RED — locked completely, owner accepted someone
+      return `
+      <div class="slot-booked" style="cursor:not-allowed;pointer-events:none">
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-medium text-slate-400">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
+          <span class="text-xs text-red-400">🔒 Booked</span>
+        </div>
+      </div>`;
+
     } else if (sl.isPending) {
-      // PENDING: show count, NOT clickable — prevents multiple bookings
-      cls = "slot-pending"; clickable = false;
-      const countText = sl.pendingCount === 1
+      // YELLOW — pending requests exist, but STILL CLICKABLE
+      // Multiple people can request same slot, owner picks one
+      const txt = sl.pendingCount === 1
         ? "1 request pending"
         : `${sl.pendingCount} requests pending`;
-      label = `<span class="text-xs text-yellow-400">⏳ ${countText} — Under Review</span>`;
+      return `
+      <div class="slot-pending" onclick="pickSlot('${sl.s}','${sl.e}')">
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-medium">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
+          <span class="text-xs text-yellow-400">⏳ ${txt}</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">You can still request — owner will choose</p>
+      </div>`;
+
     } else {
-      cls = "slot-avail"; clickable = true;
-      label = `<span class="text-xs text-green-400">✓ Available</span>`;
+      // GREEN — fully available
+      return `
+      <div class="slot-avail" onclick="pickSlot('${sl.s}','${sl.e}')">
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-medium">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
+          <span class="text-xs text-green-400">✓ Available</span>
+        </div>
+      </div>`;
     }
-    return `
-    <div class="${cls}" ${clickable ? `onclick="pickSlot('${sl.s}','${sl.e}')"` : ""}>
-      <div class="flex justify-between items-center">
-        <span class="text-sm font-medium">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
-        ${label}
-      </div>
-    </div>`;
   }).join("");
 }
 
@@ -313,151 +338,19 @@ async function submitBooking() {
   if (end<=start) { errEl.textContent="End time must be after start time"; errEl.classList.remove("hidden"); return; }
   if (purpose.length<25) { errEl.textContent="Purpose needs at least 25 characters"; errEl.classList.remove("hidden"); return; }
 
-  // Block if schedules has confirmed booking
+  // Only block if ACCEPTED or in schedules (not pending — multiple requests allowed)
   const { data:ovSched } = await supabaseClient.from("schedules").select("id")
     .eq("date",vSelDate).neq("status","cancelled").lt("start_time",end).gt("end_time",start);
   if (ovSched&&ovSched.length) {
     errEl.textContent="This time slot is already booked. Please choose another slot.";
     errEl.classList.remove("hidden"); return;
   }
-  // Block if booking_requests has pending or accepted for same slot
-  const { data:ovReqs } = await supabaseClient.from("booking_requests").select("id")
-    .eq("requested_date",vSelDate).in("status",["pending","accepted","accepted_with_remarks"])
+  const { data:ovAcc } = await supabaseClient.from("booking_requests").select("id")
+    .eq("requested_date",vSelDate).in("status",["accepted","accepted_with_remarks"])
     .lt("start_time",end).gt("end_time",start);
-  if (ovReqs&&ovReqs.length) {
-    errEl.textContent="This slot already has a pending or approved request. Please choose another slot.";
+  if (ovAcc&&ovAcc.length) {
+    errEl.textContent="This slot has already been approved for someone else. Please choose another slot.";
     errEl.classList.remove("hidden"); return;
   }
+  // Pending requests exist = still allowed to submit (owner will choose)
 
-  const { error } = await supabaseClient.from("booking_requests").insert([{
-    visitor_name:name, visitor_email:email, requested_date:vSelDate,
-    start_time:start, end_time:end, description:purpose, status:"pending"
-  }]);
-  if (error) { errEl.textContent="Submission failed. Try again."; errEl.classList.remove("hidden"); return; }
-
-  // ── Email to VISITOR: booking received confirmation ─────────────────────
-  try {
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      // Match your EmailJS template variables exactly
-      visitor_name:   name,
-      visitor_email:  email,
-      requested_date: vSelDate,
-      name:           name,     // {{name}} = From Name
-      email:          email,    // {{email}} = Reply To
-      subject:        "📅 Meeting Request Received — MyScheduler",
-      message:        `Hi ${name},\n\nYour meeting request has been submitted and is pending review.\n\n📋 Request Details:\n• Date: ${vSelDate}\n• Start Time: ${fmtTime(start)}\n• End Time: ${fmtTime(end)}\n• Purpose: ${purpose}\n• Status: ⏳ PENDING REVIEW\n\nYou will receive another email once the owner reviews your request.\n\nThank you!`,
-      start_time:     fmtTime(start),
-      end_time:       fmtTime(end),
-      status:         "⏳ PENDING REVIEW",
-      remarks:        "Your request is pending review."
-    });
-    console.log("✅ Confirmation email sent to visitor:", email);
-  } catch(e) { console.error("❌ Visitor email failed:", e); }
-
-  // ── Email to OWNER: new booking notification ─────────────────────────
-  try {
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      // Match template: {{visitor_name}}, {{visitor_email}}, {{requested_date}}
-      visitor_name:   name,
-      visitor_email:  email,
-      requested_date: vSelDate,
-      name:           name,
-      email:          email,
-      subject:        `🔔 New Meeting Request from ${name} — MyScheduler`,
-      message:        `A new meeting request has been received.\n\n📋 Request Details:\n• Visitor Name: ${name}\n• Visitor Email: ${email}\n• Date: ${vSelDate}\n• Start Time: ${fmtTime(start)}\n• End Time: ${fmtTime(end)}\n• Purpose: ${purpose}\n\nPlease log in to MyScheduler to approve or reject this request.`,
-      start_time:     fmtTime(start),
-      end_time:       fmtTime(end),
-      status:         "🔔 NEW REQUEST",
-      remarks:        `From: ${name} (${email})`
-    });
-    console.log("✅ Notification email sent to owner");
-  } catch(e) { console.error("❌ Owner notification email failed:", e); }
-
-  showToast("✓ Request submitted! Check your email for confirmation.");
-  document.getElementById("bookingForm").classList.add("hidden");
-  ["bName","bEmail","bPurpose","bStart","bEnd"].forEach(id=>document.getElementById(id).value="");
-  loadSlots(vSelDate);
-}
-
-// ── PAST REQUESTS ─────────────────────────────────────────────────────────
-async function loadPastRequests() {
-  const email = document.getElementById("pastEmail").value.trim();
-  const el = document.getElementById("pastResults");
-  if (!email) { el.innerHTML='<p class="text-slate-500 text-xs">Enter email to search</p>'; return; }
-  const { data } = await supabaseClient.from("booking_requests").select("*")
-    .eq("visitor_email",email).order("created_at",{ascending:false});
-  if (!data||!data.length) { el.innerHTML='<p class="text-slate-500 text-xs mt-2">No requests found.</p>'; return; }
-  el.innerHTML = data.map(r=>`
-    <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
-      <div class="flex justify-between items-center mb-1">
-        <span class="text-sm font-medium">${r.requested_date}</span>
-        <span class="status-${r.status}">${r.status.replace(/_/g," ")}</span>
-      </div>
-      <p class="text-xs text-slate-400">${fmtTime(r.start_time)} – ${fmtTime(r.end_time)}</p>
-      ${r.owner_remarks?`<p class="text-xs text-slate-500 mt-1 italic">${r.owner_remarks}</p>`:""}
-    </div>`).join("");
-}
-
-// ── VISITOR AI CHAT ───────────────────────────────────────────────────────
-async function vSendChat() {
-  const inp = document.getElementById("vChatIn");
-  const msg = inp.value.trim(); if (!msg) return;
-  inp.value = ""; inp.disabled = true;
-
-  vAppendMsg(msg, "user");
-  visitorChatHistory.push({ role:"user", text:msg });
-
-  const loadDiv = document.createElement("div");
-  loadDiv.className = "msg-ai text-slate-400 italic"; loadDiv.id = "vLoading";
-  loadDiv.textContent = "⋯ thinking...";
-  document.getElementById("vChatBox").appendChild(loadDiv);
-  scrollChat("vChatBox");
-
-  // Get booked slots context
-  let bookedSlots = [];
-  if (vSelDate) {
-    const { data } = await supabaseClient.from("schedules").select("start_time,end_time")
-      .eq("date",vSelDate).neq("status","cancelled");
-    bookedSlots = (data||[]).map(x=>`${x.start_time.slice(0,5)}-${x.end_time.slice(0,5)}`);
-  }
-
-  try {
-    const reply = await askVisitorAI(msg, bookedSlots, vSelDate||"");
-    document.getElementById("vLoading")?.remove();
-    vAppendMsg(reply, "ai");
-    visitorChatHistory.push({ role:"assistant", text:reply });
-    await saveChatMessage(msg,"user","visitor");
-    await saveChatMessage(reply,"assistant","visitor");
-  } catch(e) {
-    document.getElementById("vLoading")?.remove();
-    vAppendMsg("Sorry, AI is temporarily unavailable. Please use the booking form directly.", "ai");
-  }
-  inp.disabled = false; inp.focus();
-}
-
-function vAppendMsg(text, role) {
-  const box = document.getElementById("vChatBox");
-  const div = document.createElement("div");
-  div.className = role==="user" ? "msg-user" : "msg-ai";
-  div.innerHTML = String(text).replace(/\n/g,"<br>");
-  box.appendChild(div); scrollChat("vChatBox");
-}
-function scrollChat(id) { const el=document.getElementById(id); el.scrollTop=el.scrollHeight; }
-
-// ── AUTH ──────────────────────────────────────────────────────────────────
-document.getElementById("ownerBtn").addEventListener("click",()=>{
-  document.getElementById("pwModal").classList.remove("hidden");
-  document.getElementById("ownerPw").value="";
-  document.getElementById("loginErr").classList.add("hidden");
-});
-function closePwModal() { document.getElementById("pwModal").classList.add("hidden"); }
-function doLogin() {
-  if (document.getElementById("ownerPw").value===OWNER_PASS) {
-    sessionStorage.setItem("owner_auth","1");
-    closePwModal(); goToOwner();
-  } else { document.getElementById("loginErr").classList.remove("hidden"); }
-}
-function goToOwner() { window.location.href="owner.html"; }
-</script>
-</body>
-</html>
