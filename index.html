@@ -14,8 +14,9 @@ body{background:#0f172a;color:white}
 .card{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 .slot-avail{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:10px 14px;cursor:pointer;transition:all .2s}
 .slot-avail:hover{background:rgba(16,185,129,.2);border-color:#10b981;transform:translateX(3px)}
-.slot-booked{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;cursor:not-allowed;opacity:.55}
+.slot-booked{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;cursor:not-allowed;opacity:.55;pointer-events:none}
 .slot-pending{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 14px;cursor:pointer;opacity:.85;transition:all .2s}
+.slot-pending:hover{background:rgba(245,158,11,.12);border-color:#f59e0b}
 .msg-user{background:#4f46e5;border-radius:16px 16px 4px 16px;padding:10px 14px;margin-bottom:8px;max-width:85%;margin-left:auto;font-size:.875rem;word-break:break-word}
 .msg-ai{background:#1e293b;border:1px solid #334155;border-radius:16px 16px 16px 4px;padding:10px 14px;margin-bottom:8px;max-width:85%;font-size:.875rem;line-height:1.6;word-break:break-word}
 .cal-day{text-align:center;padding:7px 2px;border-radius:8px;cursor:pointer;font-size:.82rem;color:#94a3b8;transition:all .15s;position:relative}
@@ -24,7 +25,6 @@ body{background:#0f172a;color:white}
 .cal-day.selected{background:rgba(99,102,241,.3);color:#818cf8;outline:1px solid #6366f1}
 .cal-day.past{color:#334155;cursor:not-allowed}
 .cal-day.empty{cursor:default}
-.cal-day.has-event::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:#10b981;border-radius:50%}
 .status-pending{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
 .status-accepted,.status-accepted_with_remarks{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
 .status-declined{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:600}
@@ -112,7 +112,6 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
         <button onclick="vSendChat()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition text-sm font-medium">Send</button>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -122,7 +121,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     <h2 class="text-xl font-bold mb-2">⚙ Owner Dashboard</h2>
     <p class="text-slate-400 text-sm mb-5">Enter your passcode to continue</p>
     <input id="ownerPw" type="password" placeholder="Enter passcode" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 mb-3 focus:outline-none focus:border-indigo-500" onkeydown="if(event.key==='Enter')doLogin()"/>
-    <p id="loginErr" class="text-red-400 text-xs mb-3 hidden">Incorrect passcode. Please try again.</p>
+    <p id="loginErr" class="text-red-400 text-xs mb-3 hidden">Incorrect passcode.</p>
     <button onclick="doLogin()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition font-semibold mb-2">Login</button>
     <button onclick="closePwModal()" class="w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition text-sm text-slate-400">Cancel</button>
   </div>
@@ -132,10 +131,11 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 <div id="toast" class="hidden fixed bottom-6 right-6 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm font-medium bg-green-600"></div>
 
 <script>
-const OWNER_PASS = "Usharama@7505";
+const OWNER_PASS         = "Usharama@7505";
 const EMAILJS_SERVICE_ID  = "service_yoopnyg";
 const EMAILJS_TEMPLATE_ID = "template_anwow39";
 const EMAILJS_PUBLIC_KEY  = "7PtWUw7mxp1fRlLb6";
+const OWNER_EMAIL         = "mannamvyshnavi795@gmail.com";
 
 let vCalY, vCalM, vSelDate = null;
 
@@ -150,15 +150,15 @@ window.addEventListener("load", () => {
   loadSlots(vSelDate);
   if (sessionStorage.getItem("owner_auth")) goToOwner();
 
-  // Realtime
+  // Realtime — refresh slots when DB changes
   supabaseClient.channel("visitor-rt")
-    .on("postgres_changes", { event: "*", schema: "public", table: "schedules" }, () => { if (vSelDate) loadSlots(vSelDate); })
-    .on("postgres_changes", { event: "*", schema: "public", table: "booking_requests" }, () => { if (vSelDate) loadSlots(vSelDate); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"schedules" }, () => { if(vSelDate) loadSlots(vSelDate); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"booking_requests" }, () => { if(vSelDate) loadSlots(vSelDate); })
     .subscribe();
 });
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
-function getIST() { return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })); }
+function getIST() { return new Date(new Date().toLocaleString("en-US", { timeZone:"Asia/Kolkata" })); }
 function fmtDate(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function pad(n) { return String(n).padStart(2,"0"); }
 function fmtTime(t) {
@@ -175,10 +175,10 @@ function showToast(msg, color="green") {
   setTimeout(() => t.classList.add("hidden"), 4000);
 }
 
-// ── VISITOR CALENDAR (past dates disabled) ────────────────────────────────
+// ── CALENDAR ──────────────────────────────────────────────────────────────
 function renderVCal() {
   document.getElementById("vCalLabel").textContent =
-    new Date(vCalY, vCalM, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+    new Date(vCalY, vCalM, 1).toLocaleString("en-US", { month:"long", year:"numeric" });
   const grid = document.getElementById("vCalGrid");
   grid.innerHTML = "";
   const first = new Date(vCalY, vCalM, 1).getDay();
@@ -193,7 +193,7 @@ function renderVCal() {
     const el = document.createElement("div");
     el.className = "cal-day"; el.textContent = d;
     if (ds < today) {
-      el.classList.add("past"); // VISITORS: past dates disabled
+      el.classList.add("past");
     } else {
       if (ds === today) el.classList.add("today");
       if (ds === vSelDate) el.classList.add("selected");
@@ -210,11 +210,10 @@ function vSelectDate(ds) {
   const [y,m,d] = ds.split("-");
   document.getElementById("slotsDateLabel").textContent =
     new Date(y,m-1,d).toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
-  loadSlots(ds);
-  // Pre-fill booking form date
   document.getElementById("formDateLabel").textContent =
     new Date(y,m-1,d).toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   document.getElementById("bookingForm").classList.remove("hidden");
+  loadSlots(ds);
 }
 
 // ── SLOTS ─────────────────────────────────────────────────────────────────
@@ -222,17 +221,14 @@ async function loadSlots(date) {
   const c = document.getElementById("slotsContainer");
   c.innerHTML = '<p class="text-slate-500 text-sm">Loading...</p>';
 
-  // Fetch confirmed schedule slots (owner-added or accepted meetings)
+  // Confirmed meetings from schedules
   const { data: bk } = await supabaseClient
-    .from("schedules")
-    .select("start_time,end_time")
-    .eq("date", date)
-    .neq("status","cancelled");
+    .from("schedules").select("start_time,end_time")
+    .eq("date", date).neq("status","cancelled");
 
-  // Fetch booking requests
+  // All active requests
   const { data: allReqs } = await supabaseClient
-    .from("booking_requests")
-    .select("start_time,end_time,status")
+    .from("booking_requests").select("start_time,end_time,status")
     .eq("requested_date", date)
     .in("status", ["pending","accepted","accepted_with_remarks"]);
 
@@ -244,21 +240,15 @@ async function loadSlots(date) {
   const slots = [];
   for (let h=5; h<23; h++) {
     for (let m=0; m<60; m+=30) {
-      const s=`${pad(h)}:${pad(m)}`;
-      const eh=m===30?h+1:h, em=m===30?0:30;
-      const e=`${pad(eh)}:${pad(em)}`;
+      const s = `${pad(h)}:${pad(m)}`;
+      const eh = m===30?h+1:h, em = m===30?0:30;
+      const e = `${pad(eh)}:${pad(em)}`;
+      const ov = (arr) => arr.some(x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s);
+      const pendingCount = pendingReqs.filter(x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s).length;
 
-      const overlaps = (arr) => arr.some(
-        x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s
-      );
-
-      const pendingCount = pendingReqs.filter(
-        x => x.start_time.slice(0,5) < e && x.end_time.slice(0,5) > s
-      ).length;
-
-      // LOCKED only when: in schedules table OR owner accepted a request
-      const isBooked  = overlaps(bk||[]) || overlaps(acceptedReqs);
-      // PENDING = has requests but owner not decided yet — still CLICKABLE
+      // LOCKED: confirmed in schedules OR owner accepted a request
+      const isBooked  = ov(bk||[]) || ov(acceptedReqs);
+      // PENDING: has requests but owner hasn't decided yet — STILL CLICKABLE
       const isPending = !isBooked && pendingCount > 0;
 
       slots.push({ s, e, isBooked, isPending, pendingCount });
@@ -272,34 +262,26 @@ async function loadSlots(date) {
 
   c.innerHTML = slots.map(sl => {
     if (sl.isBooked) {
-      // RED — locked completely, owner accepted someone
-      return `
-      <div class="slot-booked" style="cursor:not-allowed;pointer-events:none">
+      // RED — fully locked after owner accepts
+      return `<div class="slot-booked">
         <div class="flex justify-between items-center">
           <span class="text-sm font-medium text-slate-400">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
           <span class="text-xs text-red-400">🔒 Booked</span>
         </div>
       </div>`;
-
     } else if (sl.isPending) {
-      // YELLOW — pending requests exist, but STILL CLICKABLE
-      // Multiple people can request same slot, owner picks one
-      const txt = sl.pendingCount === 1
-        ? "1 request pending"
-        : `${sl.pendingCount} requests pending`;
-      return `
-      <div class="slot-pending" onclick="pickSlot('${sl.s}','${sl.e}')">
+      // YELLOW — pending, STILL CLICKABLE (multiple requests allowed)
+      const txt = sl.pendingCount === 1 ? "1 request pending" : `${sl.pendingCount} requests pending`;
+      return `<div class="slot-pending" onclick="pickSlot('${sl.s}','${sl.e}')">
         <div class="flex justify-between items-center">
           <span class="text-sm font-medium">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
           <span class="text-xs text-yellow-400">⏳ ${txt}</span>
         </div>
-        <p class="text-xs text-slate-500 mt-1">You can still request — owner will choose</p>
+        <p class="text-xs text-slate-500 mt-1">You can still request — owner will decide</p>
       </div>`;
-
     } else {
       // GREEN — fully available
-      return `
-      <div class="slot-avail" onclick="pickSlot('${sl.s}','${sl.e}')">
+      return `<div class="slot-avail" onclick="pickSlot('${sl.s}','${sl.e}')">
         <div class="flex justify-between items-center">
           <span class="text-sm font-medium">${fmtTime(sl.s)} – ${fmtTime(sl.e)}</span>
           <span class="text-xs text-green-400">✓ Available</span>
@@ -309,11 +291,11 @@ async function loadSlots(date) {
   }).join("");
 }
 
-function pickSlot(s,e) {
+function pickSlot(s, e) {
   document.getElementById("bStart").value = s;
   document.getElementById("bEnd").value = e;
   document.getElementById("bookingForm").classList.remove("hidden");
-  document.getElementById("bookingForm").scrollIntoView({behavior:"smooth"});
+  document.getElementById("bookingForm").scrollIntoView({ behavior:"smooth" });
 }
 
 function updateCharCount() {
@@ -323,7 +305,7 @@ function updateCharCount() {
   el.className = n>=25 ? "text-xs text-green-400 mb-3" : "text-xs text-slate-500 mb-3";
 }
 
-// ── BOOKING SUBMIT ────────────────────────────────────────────────────────
+// ── SUBMIT BOOKING ────────────────────────────────────────────────────────
 async function submitBooking() {
   const name    = document.getElementById("bName").value.trim();
   const email   = document.getElementById("bEmail").value.trim();
@@ -338,7 +320,7 @@ async function submitBooking() {
   if (end<=start) { errEl.textContent="End time must be after start time"; errEl.classList.remove("hidden"); return; }
   if (purpose.length<25) { errEl.textContent="Purpose needs at least 25 characters"; errEl.classList.remove("hidden"); return; }
 
-  // Only block if ACCEPTED or in schedules (not pending — multiple requests allowed)
+  // Block only if confirmed in schedules OR already accepted
   const { data:ovSched } = await supabaseClient.from("schedules").select("id")
     .eq("date",vSelDate).neq("status","cancelled").lt("start_time",end).gt("end_time",start);
   if (ovSched&&ovSched.length) {
@@ -349,8 +331,123 @@ async function submitBooking() {
     .eq("requested_date",vSelDate).in("status",["accepted","accepted_with_remarks"])
     .lt("start_time",end).gt("end_time",start);
   if (ovAcc&&ovAcc.length) {
-    errEl.textContent="This slot has already been approved for someone else. Please choose another slot.";
+    errEl.textContent="This slot is already approved for someone else. Please choose another slot.";
     errEl.classList.remove("hidden"); return;
   }
-  // Pending requests exist = still allowed to submit (owner will choose)
+  // Pending = still OK to submit (owner chooses)
 
+  const { error } = await supabaseClient.from("booking_requests").insert([{
+    visitor_name:name, visitor_email:email, requested_date:vSelDate,
+    start_time:start, end_time:end, description:purpose, status:"pending"
+  }]);
+  if (error) { errEl.textContent="Submission failed. Try again."; errEl.classList.remove("hidden"); return; }
+
+  // Email to VISITOR — booking received
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      visitor_name:name, visitor_email:email, requested_date:vSelDate,
+      name, email,
+      subject:"📅 Meeting Request Received — MyScheduler",
+      message:`Hi ${name},\n\nYour meeting request has been submitted and is pending review.\n\n📋 Details:\n• Date: ${vSelDate}\n• Start: ${fmtTime(start)}\n• End: ${fmtTime(end)}\n• Purpose: ${purpose}\n\nYou will be notified once the owner reviews your request.\n\nThank you!`,
+      start_time:fmtTime(start), end_time:fmtTime(end), status:"⏳ PENDING", remarks:"Under review"
+    });
+  } catch(e) { console.error("Visitor email failed:", e); }
+
+  // Email to OWNER — new request notification
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      visitor_name:name, visitor_email:email, requested_date:vSelDate,
+      name, email,
+      subject:`🔔 New Meeting Request from ${name} — MyScheduler`,
+      message:`New meeting request received.\n\n📋 Details:\n• Visitor: ${name}\n• Email: ${email}\n• Date: ${vSelDate}\n• Start: ${fmtTime(start)}\n• End: ${fmtTime(end)}\n• Purpose: ${purpose}\n\nPlease log in to approve or reject.`,
+      start_time:fmtTime(start), end_time:fmtTime(end), status:"🔔 NEW REQUEST", remarks:`From: ${name} (${email})`
+    });
+  } catch(e) { console.error("Owner email failed:", e); }
+
+  showToast("✓ Request submitted! Check your email for confirmation.");
+  document.getElementById("bookingForm").classList.add("hidden");
+  ["bName","bEmail","bPurpose","bStart","bEnd"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("charCount").textContent = "0 / 25 characters";
+  loadSlots(vSelDate);
+}
+
+// ── PAST REQUESTS ─────────────────────────────────────────────────────────
+async function loadPastRequests() {
+  const email = document.getElementById("pastEmail").value.trim();
+  const el = document.getElementById("pastResults");
+  if (!email) { el.innerHTML='<p class="text-slate-500 text-xs">Enter email to search</p>'; return; }
+  const { data } = await supabaseClient.from("booking_requests").select("*")
+    .eq("visitor_email",email).order("created_at",{ascending:false});
+  if (!data||!data.length) { el.innerHTML='<p class="text-slate-500 text-xs mt-2">No requests found.</p>'; return; }
+  el.innerHTML = data.map(r=>`
+    <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-sm font-medium">${r.requested_date}</span>
+        <span class="status-${r.status}">${r.status.replace(/_/g," ")}</span>
+      </div>
+      <p class="text-xs text-slate-400">${fmtTime(r.start_time)} – ${fmtTime(r.end_time)}</p>
+      ${r.owner_remarks?`<p class="text-xs text-slate-500 mt-1 italic">${r.owner_remarks}</p>`:""}
+    </div>`).join("");
+}
+
+// ── VISITOR AI CHAT ───────────────────────────────────────────────────────
+async function vSendChat() {
+  const inp = document.getElementById("vChatIn");
+  const msg = inp.value.trim(); if (!msg) return;
+  inp.value = ""; inp.disabled = true;
+  vAddMsg(msg, "user");
+  visitorChatHistory.push({ role:"user", text:msg });
+
+  const loadDiv = document.createElement("div");
+  loadDiv.className = "msg-ai text-slate-400 italic"; loadDiv.id = "vLoading";
+  loadDiv.textContent = "⋯ thinking...";
+  document.getElementById("vChatBox").appendChild(loadDiv);
+  document.getElementById("vChatBox").scrollTop = document.getElementById("vChatBox").scrollHeight;
+
+  let bookedSlots = [];
+  if (vSelDate) {
+    const { data } = await supabaseClient.from("schedules").select("start_time,end_time")
+      .eq("date",vSelDate).neq("status","cancelled");
+    bookedSlots = (data||[]).map(x=>`${x.start_time.slice(0,5)}-${x.end_time.slice(0,5)}`);
+  }
+
+  try {
+    const reply = await askVisitorAI(msg, bookedSlots, vSelDate||"");
+    document.getElementById("vLoading")?.remove();
+    vAddMsg(reply, "ai");
+    visitorChatHistory.push({ role:"assistant", text:reply });
+    await saveChatMessage(msg,"user","visitor");
+    await saveChatMessage(reply,"assistant","visitor");
+  } catch(e) {
+    document.getElementById("vLoading")?.remove();
+    vAddMsg("Sorry, AI is temporarily unavailable.", "ai");
+  }
+  inp.disabled = false; inp.focus();
+}
+
+function vAddMsg(text, role) {
+  const box = document.getElementById("vChatBox");
+  const div = document.createElement("div");
+  div.className = role==="user" ? "msg-user" : "msg-ai";
+  div.innerHTML = String(text).replace(/\n/g,"<br>");
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────
+document.getElementById("ownerBtn").addEventListener("click", () => {
+  document.getElementById("pwModal").classList.remove("hidden");
+  document.getElementById("ownerPw").value = "";
+  document.getElementById("loginErr").classList.add("hidden");
+});
+function closePwModal() { document.getElementById("pwModal").classList.add("hidden"); }
+function doLogin() {
+  if (document.getElementById("ownerPw").value === OWNER_PASS) {
+    sessionStorage.setItem("owner_auth","1");
+    closePwModal(); goToOwner();
+  } else { document.getElementById("loginErr").classList.remove("hidden"); }
+}
+function goToOwner() { window.location.href = "owner.html"; }
+</script>
+</body>
+</html>
