@@ -581,15 +581,20 @@ async function sendEmailTo(toEmail, toName, type, req, remarks = "") {
 
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     toEmail,
-      to_name:      toName,
-      subject:      cfg.subject,
-      message:      cfg.message,
-      meeting_date: req.requested_date || "",
-      start_time:   fmtTime(req.start_time),
-      end_time:     fmtTime(req.end_time),
-      status:       cfg.status,
-      remarks:      remarks || "None"
+      // ── Variables matching your EmailJS template exactly ──────
+      visitor_name:   toName,           // {{visitor_name}} in template
+      visitor_email:  toEmail,          // {{visitor_email}} in template
+      requested_date: req.requested_date || "", // {{requested_date}} in template
+      name:           toName,           // {{name}} = From Name field
+      email:          toEmail,          // {{email}} = Reply To field
+
+      // ── Extra variables for richer emails ─────────────────────
+      subject:        cfg.subject,
+      message:        cfg.message,
+      start_time:     fmtTime(req.start_time),
+      end_time:       fmtTime(req.end_time),
+      status:         cfg.status,
+      remarks:        remarks || "None"
     });
     console.log(`✅ Email [${type}] sent to:`, toEmail);
   } catch(e) {

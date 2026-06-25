@@ -289,15 +289,18 @@ async function submitBooking() {
   // ── Email to VISITOR: booking received confirmation ─────────────────────
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     email,
-      to_name:      name,
-      subject:      "📅 Meeting Request Received — MyScheduler",
-      message:      `Hi ${name},\n\nYour meeting request has been submitted and is now pending review.\n\n📋 Request Details:\n• Visitor Name: ${name}\n• Date: ${vSelDate}\n• Start Time: ${fmtTime(start)}\n• End Time: ${fmtTime(end)}\n• Purpose: ${purpose}\n• Status: ⏳ PENDING REVIEW\n\nYou will receive another email once the owner reviews your request.\n\nThank you for using MyScheduler!`,
-      meeting_date: vSelDate,
-      start_time:   fmtTime(start),
-      end_time:     fmtTime(end),
-      status:       "⏳ PENDING REVIEW",
-      remarks:      "Your request has been received and is under review."
+      // Match your EmailJS template variables exactly
+      visitor_name:   name,
+      visitor_email:  email,
+      requested_date: vSelDate,
+      name:           name,     // {{name}} = From Name
+      email:          email,    // {{email}} = Reply To
+      subject:        "📅 Meeting Request Received — MyScheduler",
+      message:        `Hi ${name},\n\nYour meeting request has been submitted and is pending review.\n\n📋 Request Details:\n• Date: ${vSelDate}\n• Start Time: ${fmtTime(start)}\n• End Time: ${fmtTime(end)}\n• Purpose: ${purpose}\n• Status: ⏳ PENDING REVIEW\n\nYou will receive another email once the owner reviews your request.\n\nThank you!`,
+      start_time:     fmtTime(start),
+      end_time:       fmtTime(end),
+      status:         "⏳ PENDING REVIEW",
+      remarks:        "Your request is pending review."
     });
     console.log("✅ Confirmation email sent to visitor:", email);
   } catch(e) { console.error("❌ Visitor email failed:", e); }
@@ -305,15 +308,18 @@ async function submitBooking() {
   // ── Email to OWNER: new booking notification ─────────────────────────
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     "mannamvyshnavi795@gmail.com",
-      to_name:      "Owner",
-      subject:      `🔔 New Meeting Request from ${name} — MyScheduler`,
-      message:      `A new meeting request has been received.\n\n📋 Request Details:\n• Visitor Name: ${name}\n• Visitor Email: ${email}\n• Date: ${vSelDate}\n• Start Time: ${fmtTime(start)}\n• End Time: ${fmtTime(end)}\n• Purpose: ${purpose}\n\nPlease log in to MyScheduler to approve or reject this request.`,
-      meeting_date: vSelDate,
-      start_time:   fmtTime(start),
-      end_time:     fmtTime(end),
-      status:       "🔔 NEW REQUEST",
-      remarks:      `From: ${name} (${email})`
+      // Match template: {{visitor_name}}, {{visitor_email}}, {{requested_date}}
+      visitor_name:   name,
+      visitor_email:  email,
+      requested_date: vSelDate,
+      name:           name,
+      email:          email,
+      subject:        `🔔 New Meeting Request from ${name} — MyScheduler`,
+      message:        `A new meeting request has been received.\n\n📋 Request Details:\n• Visitor Name: ${name}\n• Visitor Email: ${email}\n• Date: ${vSelDate}\n• Start Time: ${fmtTime(start)}\n• End Time: ${fmtTime(end)}\n• Purpose: ${purpose}\n\nPlease log in to MyScheduler to approve or reject this request.`,
+      start_time:     fmtTime(start),
+      end_time:       fmtTime(end),
+      status:         "🔔 NEW REQUEST",
+      remarks:        `From: ${name} (${email})`
     });
     console.log("✅ Notification email sent to owner");
   } catch(e) { console.error("❌ Owner notification email failed:", e); }
